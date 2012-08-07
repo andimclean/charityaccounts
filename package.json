@@ -1,0 +1,20 @@
+{
+  "name": "charity-accounts",
+  "version": "0.0.1",
+  "author": {
+    "name": "Andi McLean",
+    "email": "andi_mclean@ntlworld.com "
+  },
+  "description": "a very basic node.js helloworld application",
+  "scripts": {
+    "start": "node ./bin/server"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "engines": {
+    "node": ">=0.8"
+  },
+  "analyze": true,
+  "optionalDependencies": {},
+  "subdomain": "lgbtwarrington.charityaccounts"
+}
