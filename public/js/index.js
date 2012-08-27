@@ -106,6 +106,7 @@ $(document).ready(function () {
                 error: function(jqXHR, textStatus, errorThrown){
                     if (jqXHR.status === 403) {
                         self.user(null);
+                        self.go_to_home();
                     } else {
                         alert(errorThrown);
                     }
@@ -161,6 +162,7 @@ $(document).ready(function () {
             if (jqXHR.status === 403) {
                 self.setTokenInStorage("");
                 self.user(null);
+                self.go_to_home();
             }
         });
         self.setAjax();
