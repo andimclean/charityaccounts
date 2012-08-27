@@ -3,7 +3,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>Bootstrap, from Twitter</title>
+    <title>Charity Accounts</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -32,7 +32,7 @@
 
   <body>
 
-    <div class="navbar navbar-inverse navbar-fixed-top">
+    <div id="navigation" class="navbar navbar-inverse navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container">
           <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
@@ -40,12 +40,17 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </a>
-          <a class="brand" href="#">Project name</a>
+          <a class="brand" href="#">Charity Accounts</a>
           <div class="nav-collapse collapse">
             <ul class="nav">
-              <li class="active"><a href="#">Home</a></li>
-              <li><a href="#about">About</a></li>
-              <li><a href="#contact">Contact</a></li>
+              <li data-bind="css:{active: isHome()}" class="active"><a href="#home">Home</a></li>
+              <li data-bind="css:{active: isAbout()}" ><a href="#about">About</a></li>
+              <li data-bind="css:{active: isContact()}" ><a href="#contact">Contact</a></li>
+			        <li> <form class="navbar-form pull-right" id="loginform" action="#login" method="post" data-bind="visible: !isLoggedIn()">
+	              <input type="text" class="span2" placeholder="email address" name="username" data-bind="value: email">
+	              <button type="submit" class="btn">sign in / register</button>
+                </form></li>
+              <li data-bind="css:{active: isUser()}" ><a href="#user" data-bind="visible: isLoggedIn(),text:name"></a><li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
@@ -54,9 +59,19 @@
 
     <div class="container">
 
-      <h1>Bootstrap starter template</h1>
-      <p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
-
+		<div id="home" class="hide sections">
+			<h1>Bootstrap starter template</h1>
+			<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
+		</div>
+		<div id="about" class="hide sections">
+			<h1>About</h1>
+		</div>
+		<div id="contact" class="hide sections">
+			<h1>Contact</h1>
+		</div>
+		<div id="user" class="hide sections">
+            <h1 data-bind="text:name"></h1>
+        </div>
     </div> <!-- /container -->
 
     <!-- Le javascript

@@ -4,7 +4,7 @@
  */
 
 var express = require('express')
-  , routes = require('./routes')
+  , routes = require('./routes/routes.js')
   , http = require('http')
   , path = require('path');
 
@@ -20,6 +20,7 @@ app.configure(function(){
   app.use(express.methodOverride());
   app.use(app.router);
   app.use(express.static(path.join(__dirname, 'public')));
+  app.set('mongodb',process.env.DB || "charityaccounts");
 });
 
 app.configure('development', function(){
