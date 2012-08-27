@@ -22,6 +22,10 @@ function sendSuccess(res,obj) {
 function sendFailure(res,message) {
   res.send(400,{status: 'error',message: message});
 }
+
+function sendNotAuthed(res,message) {
+  res.send(403,{status: 'error',message: message});
+}
 function index(req, res){
   res.redirect("index.html");
 };
@@ -161,16 +165,16 @@ function parseSession(req, res, next) {
         db.sessions.findOne({token: sessionToken},function(err,data) {
             if (data) {
 	            req.sessionObject = data;
-	            res.sessionToken = req.headers.sessionToken;
+	            res.sessionToken = sessionToken;
 	            next();
 	        } else {
 	            res.sessionToken = "";
-                sendFailure(res,"Not logged in");
+                sendNotAuthed(res,"Not logged in");
             }
         });
     } else {
 	    res.sessionToken = "";
-	    sendFailure(res,"Not logged in");
+	    sendNotAuthed(res,"Not logged in");
 	}
 }
 

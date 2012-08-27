@@ -86,7 +86,11 @@ $(document).ready(function () {
                    self.user(data.obj);
                 },
                 error: function(jqXHR, textStatus, errorThrown){
-                    console.log(errorThrown);
+                    if (jqXHR.status === 403) {
+                        self.user(null);
+                    } else {
+                        alert(errorThrown);
+                    }
                 }
             });
         };
@@ -130,6 +134,11 @@ $(document).ready(function () {
             var data = jQuery.parseJSON(xhr.responseText);
             if (data.session !== self.getTokenFromStorage()) {
                 self.setTokenInStorage(data.session);
+            }
+        }).ajaxError(function(event, jqXHR, ajaxSettings, thrownError){
+            if (jqXHR.status === 403) {
+                self.setTokenInStorage("");
+                self.user(null);
             }
         });
         self.setAjax();
