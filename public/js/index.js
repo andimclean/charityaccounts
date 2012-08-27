@@ -51,6 +51,7 @@ $(document).ready(function () {
                 data: { token: token},
                 success: function(data) {
                     self.user(data.obj);
+                    self.go_to_home();
                 },
                 error: function(data) {
                     alert("Failure : " + data);
@@ -94,6 +95,24 @@ $(document).ready(function () {
                 }
             });
         };
+        
+        self.performLogout = function() {
+            jQuery.ajax({
+                url: '/api/logout',
+                success: function(data){
+                   self.user(null);
+                   self.go_to_home();
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    if (jqXHR.status === 403) {
+                        self.user(null);
+                    } else {
+                        alert(errorThrown);
+                    }
+                },
+                type: 'post'
+            });
+        };
         //setup
         Sammy(function() {
             this.post('#login',function() {
@@ -127,6 +146,9 @@ $(document).ready(function () {
             this.get('#loginconfirm/:token',function() {
                 self.performLogin(this.params['token']);
             });
+            this.get('#logout',function(){
+                self.performLogout();
+            });
             this.get('', function() { self.go_to_home() });
         }).run();
         
@@ -151,4 +173,5 @@ $(document).ready(function () {
     var app = new AppViewModel();
     ko.applyBindings(app, document.getElementById("navigation"));
     ko.applyBindings(app, document.getElementById("users"));
+    ko.applyBindings(app, document.getElementById("home"));
 });

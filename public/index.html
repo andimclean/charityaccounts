@@ -50,7 +50,8 @@
 	              <input type="text" class="span2" placeholder="email address" name="username" data-bind="value: email">
 	              <button type="submit" class="btn">sign in / register</button>
                 </form></li>
-              <li data-bind="css:{active: isUser()}" ><a href="#user" data-bind="visible: isLoggedIn(),text:name"></a><li>
+              <li data-bind="css:{active: isLoggedIn()}" ><a href="#user" data-bind="visible: isLoggedIn(),text:name"></a><li>
+              <li data-bind="css:{active: isLoggedIn()}" ><a href="#logout" data-bind="visible: isLoggedIn()">sign out</a><li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
@@ -60,8 +61,13 @@
     <div class="container">
 
 		<div id="home" class="hide sections">
+		  <div data-bind="visible: !isLoggedIn()">
 			<h1>Bootstrap starter template</h1>
 			<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
+			</div>
+			<div data-bind="visible: isLoggedIn()">
+		      <h1>Dashboard</h1>
+		  </div>
 		</div>
 		<div id="about" class="hide sections">
 			<h1>About</h1>

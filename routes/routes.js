@@ -178,11 +178,31 @@ function parseSession(req, res, next) {
 	}
 }
 
+function logout(req,res){
+    var sessionToken = res.sessionToken;
+    if (sessionToken) {
+        db.sessions.remove({token: sessionToken},function(err,data) {
+            if (err) {
+                sendFailure(res,err);
+            } else {
+	            res.sessionToken = '';
+	            req.sessionObject = null;
+	            sendSuccess(res,null);
+	        }
+        });
+    } else {
+        res.sessionToken = '';
+        req.sessionObject = null;
+        sendSuccess(res,null);
+    }
+}
+
 exports.bind = function bindRoutes(app) {
     db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions"]);
 	app.get('/', index);
 	app.post('/api/login',login);
 	app.post('/api/loginConfirm',loginConfirm);
 	app.get('/api/getUser',parseSession,getUser);
+	app.post('/api/logout',parseSession,logout);
 };
 
