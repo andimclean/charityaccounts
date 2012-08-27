@@ -79,6 +79,17 @@ $(document).ready(function () {
             self.setAjax();
         };
         
+        self.loadUser = function() {
+            jQuery.ajax({
+                url: '/api/getUser',
+                success: function(data){
+                   self.user(data.obj);
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    console.log(errorThrown);
+                }
+            });
+        };
         //setup
         Sammy(function() {
             this.post('#login',function() {
@@ -122,6 +133,10 @@ $(document).ready(function () {
             }
         });
         self.setAjax();
+        var token = self.getTokenFromStorage();
+        if (token) {
+            self.loadUser();
+        }
     }
 
     var app = new AppViewModel();

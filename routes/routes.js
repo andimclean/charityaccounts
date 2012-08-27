@@ -7,6 +7,7 @@ var mailer = require("nodemailer");
 var mongo = require("mongojs");
 var db = null;
 var step = require("step");
+var util = require("util");
 
 var emailTransport = mailer.createTransport("SMTP",{
     host: "smtp.ntlworld.com",
@@ -63,10 +64,8 @@ function login(req, res) {
     },
     function sendResponse(err, response) {
 	    if(err){
-	        console.log(err);
 	        sendFailure(res,err);
 	    }else{
-	        console.log("Message sent: " + response.message);
 	        sendSuccess(res);
 	    }
     }
@@ -144,19 +143,35 @@ function loginConfirm(req,res) {
     );
 }
 
+function getUser(req,res){
+    var sessionObj = req.sessionObject;
+    db.users.findOne({_id:sessionObj.user},function(err,data) {
+        if (!err) {
+            sendSuccess(res,data);
+        } else {
+            sendFailure(res,err);
+        }
+    });
+}
+
 function parseSession(req, res, next) {
 
-    var sessionToken = req.headers.sessionToken;
+    var sessionToken = req.headers.sessiontoken;
     if (sessionToken) {
-        db.sessions.findOne({token: sessionToken},function(data) {
-            req.sessionObject = data;
-            res.sessionToken = req.headers.sessionToken;
-            next(req,res);    
+        db.sessions.findOne({token: sessionToken},function(err,data) {
+            if (data) {
+	            req.sessionObject = data;
+	            res.sessionToken = req.headers.sessionToken;
+	            next();
+	        } else {
+	            res.sessionToken = "";
+                sendFailure(res,"Not logged in");
+            }
         });
-    }
-    
-    res.sessionToken = "";
-    sendFailure(res,"Not logged in");
+    } else {
+	    res.sessionToken = "";
+	    sendFailure(res,"Not logged in");
+	}
 }
 
 exports.bind = function bindRoutes(app) {
@@ -164,5 +179,6 @@ exports.bind = function bindRoutes(app) {
 	app.get('/', index);
 	app.post('/api/login',login);
 	app.post('/api/loginConfirm',loginConfirm);
+	app.get('/api/getUser',parseSession,getUser);
 };
 
