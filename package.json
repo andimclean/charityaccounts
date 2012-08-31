@@ -14,7 +14,8 @@
 	    "jade": "*",
 	    "nodemailer":"0.3.x",
 	    "mongojs":"0.4.x",
-	    "step":"0.x"
+	    "step":"0.x",
+	    "underscore" : "*"
   },
   "devDependencies": {},
   "engines": {

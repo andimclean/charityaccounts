@@ -1,15 +1,102 @@
 $(document).ready(function () {
-    function AppViewModel() {
-        var self = this;
 
+    function Organisation(data) {
+        var self = this;
+        data = data || {};
+        self.id = data['_id'];
+        self.name = ko.observable(data['name']|| "");
+        self.errorName = ko.observable("");
+        
+        self.hasNameError = ko.computed(function(){
+            return self.name().length == 0 || self.errorName().length > 0;
+        });
+        
+        self.reset = function() {
+            self.name("");
+            self.errorName("");
+        };
+                
+        self.addOrg = function(user) {
+            var data = self.name();
+          
+            if (data) {
+                jQuery.ajax({
+                    url: "/api/addOrg",
+                    data: {orgs : data},
+                    success: function(data) {
+                        user.updateUser(data.obj);
+                        jQuery('#addOrg').modal('hide')
+                    },
+                    error: function(jqXHR, textStatus, errorThrown){
+                         
+                    },
+                    type: 'post'
+                });
+            }
+        };
+        
+        self.url = ko.computed(function(){
+            return "#removeOrg/"+self.id;
+        });
+    }
+    
+    function User(data) {
+        var self = this;
+        data = data || {};
+        // Datas
+        self.name = ko.observable(data['name']);
+        self.email = ko.observable(data['email']);
+        self.organisations = ko.observableArray();
+        
+        //behaviours
+        self.updateUser = function(user){
+            if (user) {
+                var orgs = user.organisations;
+                var ret = [];
+                for(var loop = 0; loop < orgs.length; ++loop) {
+                    ret.push(new Organisation(orgs[loop]));
+                }
+                self.organisations(ret);
+                self.name(user.name);
+                self.email(user.email);
+            }
+        };
+        
+        self.isLoggedIn = ko.computed(function(){
+            return self.name() !== null;
+        });
+        
+        self.removeOrg = function(id) {
+            var item = self.organisations.arrayFirst(function(item){
+                return id==item.id;
+            });
+            if (item) {
+                if (confirm("Remove Organisation " + item.name() + "?")) {
+                    jQuery.ajax({
+                        url: "/api/removeOrg",
+                        data: {orgid: id},
+                        type: "post",
+                        success: function(data) {
+                            self.updateUser(data['obj']);
+                        }
+                    });
+                }
+            }
+        };
+    }
+    function AppViewModel(data) {
+        var self = this;
+        data = data || {}
         self.email = ko.observable("");
         self.navStatus = ko.observable("home");
-        self.user = ko.observable(null);
+        self.user = ko.observable(data['user'] || new User());
+        self.org = ko.observable(data['org']);
         
         //behaviour
         self.go_to_home = function() { location.hash = "home" };
         self.go_to_about = function() { location.hash = "about" };
         self.go_to_contact = function() { location.hash = "contact" };
+        
         self.isHome =  ko.computed(function(){
             return self.navStatus() == "home";
         });
@@ -23,12 +110,11 @@ $(document).ready(function () {
             return self.navStatus() == "user";
         });
         self.isLoggedIn = ko.computed(function(){
-            var user = self.user(); 
-            return user !== null;
+            return self.user().isLoggedIn;
         });
         self.name = ko.computed(function(){
             var user = self.user();
-            return user ? user.name : "";
+            return user ? user.name() : "";
         });
         self.login = function() {
             jQuery.ajax( {
@@ -50,7 +136,7 @@ $(document).ready(function () {
                 url: "/api/loginConfirm",
                 data: { token: token},
                 success: function(data) {
-                    self.user(data.obj);
+                    self.user().updateUser(data.obj);
                     self.go_to_home();
                 },
                 error: function(data) {
@@ -84,11 +170,11 @@ $(document).ready(function () {
             jQuery.ajax({
                 url: '/api/getUser',
                 success: function(data){
-                   self.user(data.obj);
+                  self.user().updateUser(data.obj);
                 },
                 error: function(jqXHR, textStatus, errorThrown){
                     if (jqXHR.status === 403) {
-                        self.user(null);
+                        self.user().updateUser(null);
                     } else {
                         alert(errorThrown);
                     }
@@ -105,7 +191,7 @@ $(document).ready(function () {
                 },
                 error: function(jqXHR, textStatus, errorThrown){
                     if (jqXHR.status === 403) {
-                        self.user(null);
+                        self.user().updateUser(null);
                         self.go_to_home();
                     } else {
                         alert(errorThrown);
@@ -114,6 +200,11 @@ $(document).ready(function () {
                 type: 'post'
             });
         };
+
+        self.resetOrg = function() {
+            self.org().reset();
+        };
+
         //setup
         Sammy(function() {
             this.post('#login',function() {
@@ -150,6 +241,13 @@ $(document).ready(function () {
             this.get('#logout',function(){
                 self.performLogout();
             });
+            this.post('#addOrg',function(){
+                self.org().addOrg(self.user());
+            });
+            this.get('#removeOrg/:id',function(){
+                self.user().removeOrg(this.params['id']);
+                self.go_to_home();
+            });
             this.get('', function() { self.go_to_home() });
         }).run();
         
@@ -172,8 +270,15 @@ $(document).ready(function () {
         }
     }
 
-    var app = new AppViewModel();
+    var user = new User();
+    var org = new Organisation();
+
+    var app = new AppViewModel({
+        user: user,
+        org: org
+    });
     ko.applyBindings(app, document.getElementById("navigation"));
-    ko.applyBindings(app, document.getElementById("users"));
-    ko.applyBindings(app, document.getElementById("home"));
+    ko.applyBindings(user, document.getElementById("user"));
+    ko.applyBindings(user, document.getElementById("home"));
+    ko.applyBindings(org, document.getElementById("addOrg"));
 });

@@ -8,6 +8,7 @@ var mongo = require("mongojs");
 var db = null;
 var step = require("step");
 var util = require("util");
+var _ = require("underscore");
 
 var emailTransport = mailer.createTransport("SMTP",{
     host: "smtp.ntlworld.com",
@@ -20,6 +21,7 @@ function sendSuccess(res,obj) {
 }
 
 function sendFailure(res,message) {
+  message = message.message || message;
   res.send(400,{status: 'error',message: message});
 }
 
@@ -196,13 +198,108 @@ function logout(req,res){
         sendSuccess(res,null);
     }
 }
+function addOrg(req,res) {
+    var orgName = req.body.orgs;
+    console.log(util.inspect(req.body));
+    if (!orgName) {
+        console.log(util.inspect(orgName));
+        sendFailure(res,"Invalid name");
+        return;
+    }
+    var org = null;
+    var user = null;
+    step(
+        function findOrg() {
+            db.organisations.findOne({name:orgName},this);
+        },
+        function checkNotExists(err,data) {
+            if (err) throw err;
+            console.log("checkNotExists: " + util.inspect(data));
+            if (data) {
+                throw new Error('Already exists');
+            }
+            return data;
+        },
+        function addOrg(err,data) {
+            if (err) throw err;
+            console.log("addOrg: " + data);
+            org = {
+                name: orgName
+            };
+            db.organisations.save(org,this);
+        },
+        function getUser(err,data) {
+            if (err) throw err;
+            console.log("getUser:" + data);
+            if (!data) {
+                throw new Error('Could not save organisation');
+            }
+            db.users.findOne({_id: req.sessionObject.user},this);
+        },
+        function updateUser(err,data) {
+            if (err) throw err;
+            console.log("updateUser: " + data);
+            if (!data) {
+                throw new Error('Could not find user');
+            }
+            user = data;
+            user.organisations.push(org);
+            db.users.save(user,this);
+        },
+        function returnUser(err,data) {
+            console.log("returnUser: " + data);
+            if (err) {
+               sendFailure(res,err);
+            } else {
+               sendSuccess(res,user);
+            }
+        }
+    );
+}
+
+function removeOrg(req,res) {
+    var orgId = req.body.orgid;
+    if (!orgId) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    console.log("Remove Org id : " + orgId);
+    var user;
+    step(
+        function getUser() {
+            db.users.findOne({_id: req.sessionObject.user},this);
+        },
+        function updateUser(err,data) {
+            if (err) throw err;
+            if (!data) {
+                throw new Error('Could not find user');
+            }
+            user = data;
+            user.organisations = _.filter(user.organisations,function(item) {
+                return orgId != item._id;
+            });
+            console.log("New user array : " + util.inspect(user));
+            db.users.save(user,this);
+        },
+        function returnUser(err,data) {
+            if (err) {
+               sendFailure(res,err);
+            } else {
+             console.log("New User: " + util.inspect(user));
+               sendSuccess(res,user);
+            }
+        }
+    );
+}
 
 exports.bind = function bindRoutes(app) {
-    db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions"]);
+    db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations"]);
 	app.get('/', index);
 	app.post('/api/login',login);
 	app.post('/api/loginConfirm',loginConfirm);
 	app.get('/api/getUser',parseSession,getUser);
 	app.post('/api/logout',parseSession,logout);
+	app.post('/api/addOrg',parseSession,addOrg);
+	app.post('/api/removeOrg',parseSession,removeOrg);
 };
 
