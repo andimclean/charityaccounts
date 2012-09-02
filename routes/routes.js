@@ -22,7 +22,8 @@ function sendSuccess(res,obj) {
 
 function sendFailure(res,message) {
   message = message.message || message;
-  res.send(400,{status: 'error',message: message});
+  var session = res.sessionToken;
+  res.send(400,{status: 'error',message: message,session:session});
 }
 
 function sendNotAuthed(res,message) {
@@ -292,12 +293,33 @@ function removeOrg(req,res) {
     );
 }
 
+function getOrg(req,res) {
+    var orgID = req.params.orgid;
+    if (!orgID) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    step(
+        function getOrg() {
+            db.organisations.findOne(orgID, this);
+        },
+        function foundOrg(err,data) {
+            if (err) {
+               sendFailure(res,err);
+            } else {
+               sendSuccess(res,data);
+            }
+        }
+    );
+}
 exports.bind = function bindRoutes(app) {
     db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations"]);
 	app.get('/', index);
-	app.post('/api/login',login);
-	app.post('/api/loginConfirm',loginConfirm);
 	app.get('/api/getUser',parseSession,getUser);
+    app.get('/api/getOrg/:orgid',parseSession,getOrg);
+    
+    app.post('/api/login',login);
+	app.post('/api/loginConfirm',loginConfirm);
 	app.post('/api/logout',parseSession,logout);
 	app.post('/api/addOrg',parseSession,addOrg);
 	app.post('/api/removeOrg',parseSession,removeOrg);

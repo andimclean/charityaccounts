@@ -16,6 +16,7 @@
       }
     </style>
     <link href="lib/bootstrap/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="css/index.css" rel="stylesheet">
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
     <!--[if lt IE 9]>
@@ -44,14 +45,25 @@
           <div class="nav-collapse collapse">
             <ul class="nav">
               <li data-bind="css:{active: isHome()}" class="active"><a href="#home">Home</a></li>
-              <li data-bind="css:{active: isAbout()}" ><a href="#about">About</a></li>
-              <li data-bind="css:{active: isContact()}" ><a href="#contact">Contact</a></li>
+              <li data-bind="css:{active: isAbout()}" ><a href="#about">tuobA</a></li>
+              <li data-bind="css:{active: isContact()}" ><a href="#contact">tcatnoC</a></li>
 			        <li> <form class="navbar-form pull-right" id="loginform" action="#login" method="post" data-bind="visible: !isLoggedIn()">
 	              <input type="text" class="span2" placeholder="email address" name="username" data-bind="value: email">
 	              <button type="submit" class="btn">sign in / register</button>
                 </form></li>
-              <li data-bind="css:{active: isLoggedIn()}" ><a href="#user" data-bind="visible: isLoggedIn(),text:name"></a><li>
-              <li data-bind="css:{active: isLoggedIn()}" ><a href="#logout" data-bind="visible: isLoggedIn()">sign out</a><li>
+              <li data-bind="visible: isLoggedIn()" class='dropdown'>
+                <a href="#" role="button" data-toggle="dropdown" class="dropdown-toggle" ><span data-bind="text:name"></span> <b class='caret' ></b></a>
+                <ul  class="dropdown-menu"  role="menu" >
+                  <li>
+                    <a href="#">Organisations <i class="pull-right icon-chevron-right"></i></a>
+                    <ul class="dropdown-menu sub-menu" role="menu" data-bind="foreach: user().organisations">
+                      <li><a data-bind="text: name, attr:{href : orgUrl}"></a></li>
+                    </ul>
+                  </li>  
+                  <li class="divider"></li>
+                  <li><a href="#logout">Sign Out</a><li>
+                </ul>
+              </li>
             </ul>
           </div><!--/.nav-collapse -->
         </div>
@@ -65,16 +77,11 @@
 			<h1>Bootstrap starter template</h1>
 			<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
 			</div>
-			<div class=data-bind="visible: isLoggedIn()">
+			<div data-bind="visible: isLoggedIn()">
 		      <h1>Dashboard</h1>
 		      <div class="row">
-			      <div class='well span3' id='organisations'>
-			          <h2>Organisations</h2>
-			          <button data-toggle="modal" data-target="#addOrg" class='btn'>Add Organisation</button>
-			          <ul data-bind="foreach: organisations">
-			              <li><a data-bind="text: name"></a><a data-bind="attr:{href:url}" class="pull-right"><i class='icon-remove' ></i></a></li>
-			          </ul>
-			      </div>
+			    <button data-toggle="modal" data-target="#addOrg" class='btn'>Add Organisation</button>
+                      
 		      </div>
 		  </div>
 		</div>

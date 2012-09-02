@@ -38,6 +38,10 @@ $(document).ready(function () {
         self.url = ko.computed(function(){
             return "#removeOrg/"+self.id;
         });
+        
+        self.orgUrl =  ko.computed(function(){
+            return "#home/"+self.id;
+        }); 
     }
     
     function User(data) {
@@ -56,6 +60,7 @@ $(document).ready(function () {
                 for(var loop = 0; loop < orgs.length; ++loop) {
                     ret.push(new Organisation(orgs[loop]));
                 }
+                
                 self.organisations(ret);
                 self.name(user.name);
                 self.email(user.email);
@@ -63,7 +68,8 @@ $(document).ready(function () {
         };
         
         self.isLoggedIn = ko.computed(function(){
-            return self.name() !== null;
+            var name = self.name();
+            return name !== null && name !== undefined;
         });
         
         self.removeOrg = function(id) {
@@ -110,7 +116,7 @@ $(document).ready(function () {
             return self.navStatus() == "user";
         });
         self.isLoggedIn = ko.computed(function(){
-            return self.user().isLoggedIn;
+            return self.user().isLoggedIn();
         });
         self.name = ko.computed(function(){
             var user = self.user();
@@ -204,7 +210,35 @@ $(document).ready(function () {
         self.resetOrg = function() {
             self.org().reset();
         };
-
+        
+        self.loadOrg = function(orgID) {
+            jQuery.ajax({
+                url: '/api/getOrg/' + orgID,
+                type: 'get',
+                success: function(data) {
+                    self.org(new Organisation(data.obj));
+                }
+            });
+        }
+        
+        jQuery('body').ajaxSuccess(function(e, xhr, settings) {
+            var data = jQuery.parseJSON(xhr.responseText);
+            if (data.session !== self.getTokenFromStorage()) {
+                self.setTokenInStorage(data.session);
+            }
+        }).ajaxError(function(event, jqXHR, ajaxSettings, thrownError){
+            if (jqXHR.status === 403) {
+                self.setTokenInStorage("");
+                self.user(null);
+                self.go_to_home();
+            }
+        });
+        var token = self.getTokenFromStorage();
+        if (token) {
+            self.setAjax();
+            self.loadUser();
+        }
+        
         //setup
         Sammy(function() {
             this.post('#login',function() {
@@ -213,11 +247,18 @@ $(document).ready(function () {
             });
             
             this.get('#home', function() {
+                self.org(null);
                 self.navStatus('home');
                 jQuery('.sections').hide();
                 jQuery('#home').show();
             });
-
+            
+            this.get('#home/:orgID', function() {
+                self.org(self.loadOrg(this.params['orgID']));
+                self.navStatus('home');
+                jQuery('.sections').hide();
+                jQuery('#home').show();
+            });
             this.get('#about', function() {
                 self.navStatus('about');
                 jQuery('.sections').hide();
@@ -251,23 +292,7 @@ $(document).ready(function () {
             this.get('', function() { self.go_to_home() });
         }).run();
         
-        jQuery('body').ajaxSuccess(function(e, xhr, settings) {
-            var data = jQuery.parseJSON(xhr.responseText);
-            if (data.session !== self.getTokenFromStorage()) {
-                self.setTokenInStorage(data.session);
-            }
-        }).ajaxError(function(event, jqXHR, ajaxSettings, thrownError){
-            if (jqXHR.status === 403) {
-                self.setTokenInStorage("");
-                self.user(null);
-                self.go_to_home();
-            }
-        });
-        self.setAjax();
-        var token = self.getTokenFromStorage();
-        if (token) {
-            self.loadUser();
-        }
+
     }
 
     var user = new User();
