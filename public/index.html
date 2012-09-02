@@ -61,6 +61,7 @@
                     </ul>
                   </li>  
                   <li class="divider"></li>
+                  <li><a href="#preferences">Preferences</a><li>
                   <li><a href="#logout">Sign Out</a><li>
                 </ul>
               </li>
@@ -77,13 +78,6 @@
 			<h1>Bootstrap starter template</h1>
 			<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
 			</div>
-			<div data-bind="visible: isLoggedIn()">
-		      <h1>Dashboard</h1>
-		      <div class="row">
-			    <button data-toggle="modal" data-target="#addOrg" class='btn'>Add Organisation</button>
-                      
-		      </div>
-		  </div>
 		</div>
 		<div id="about" class="hide sections">
 			<h1>About</h1>
@@ -91,8 +85,19 @@
 		<div id="contact" class="hide sections">
 			<h1>Contact</h1>
 		</div>
-		<div id="user" class="hide sections">
-        <h1 data-bind="text:name"></h1>
+		<div id="preferences" class="hide sections">
+			<h1 data-bind="text:name"></h1>
+			<div data-bind="visible: isLoggedIn()">
+			  <h1>Preferences</h1>
+			  <div id="orgList" class="well">
+		      <ul class="nav nav-list">
+					  <li class="nav-header clearfix">Organisations <button data-toggle="modal" data-target="#addOrg" class='btn btn-small pull-right'>Add</button></li>
+					  <!-- ko foreach: organisations -->
+			        <li class="clearfix"><span data-bind="text: name"></span><span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removalUrl}">delete</a></span></li>
+					  <!-- /ko -->
+		      </ul>
+	      </div>
+			</div>
     </div>
     <div id="addOrg" class="modal hide fade"  role="dialog" >
 	    <form class='modal-form' method="post" action="#addOrg">
@@ -102,11 +107,11 @@
 	          </div>
 	          <div class="modal-body">
 	            <label>Name:</label>
-	            <input type="text" value="" name="name" id="name" placeholder="Organisation name" data-bind="value: name,valueUpdate:'afterkeydown'"></input>
+	            <input type="text" class="autofocus" value="" name="name" id="name" placeholder="Organisation name" data-bind="value: name,valueUpdate:'afterkeydown'"></input>
 	          </div>
 	          <div class="modal-footer">
-	            <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-	            <button data-bind="disable: hasNameError()" type="submit" class="btn btn-primary">Save changes</button>
+               <input data-bind="disable: hasNameError()" type="submit" class="btn btn-primary" value="Save changes" />
+	             <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
 	          </div>
         </form>
       </div>

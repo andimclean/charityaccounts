@@ -35,7 +35,7 @@ $(document).ready(function () {
             }
         };
         
-        self.url = ko.computed(function(){
+        self.removalUrl = ko.computed(function(){
             return "#removeOrg/"+self.id;
         });
         
@@ -239,8 +239,17 @@ $(document).ready(function () {
             self.loadUser();
         }
         
+        jQuery('.modal').on('shown', function () {
+            jQuery(this).find('.autofocus').focus();
+        });
+                
         //setup
         Sammy(function() {
+            this.before('', function() {
+                jQuery('.nav .dropdown.open').removeClass('open');
+                return true;
+            });
+            
             this.post('#login',function() {
                 self.login();
                 return false;
@@ -271,10 +280,10 @@ $(document).ready(function () {
                 jQuery('#contact').show();
             });
             
-            this.get('#user', function() {
-                self.navStatus('user');
+            this.get('#preferences', function() {
+                self.navStatus('preferences');
                 jQuery('.sections').hide();
-                jQuery('#user').show();
+                jQuery('#preferences').show();
             });
             this.get('#loginconfirm/:token',function() {
                 self.performLogin(this.params['token']);
@@ -284,10 +293,11 @@ $(document).ready(function () {
             });
             this.post('#addOrg',function(){
                 self.org().addOrg(self.user());
+                self.org().reset();
             });
             this.get('#removeOrg/:id',function(){
                 self.user().removeOrg(this.params['id']);
-                self.go_to_home();
+                history.back();
             });
             this.get('', function() { self.go_to_home() });
         }).run();
@@ -303,7 +313,7 @@ $(document).ready(function () {
         org: org
     });
     ko.applyBindings(app, document.getElementById("navigation"));
-    ko.applyBindings(user, document.getElementById("user"));
+    ko.applyBindings(user, document.getElementById("preferences"));
     ko.applyBindings(user, document.getElementById("home"));
     ko.applyBindings(org, document.getElementById("addOrg"));
 });

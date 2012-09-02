@@ -28,3 +28,12 @@
     top: 11px;
     left: -6px;
 }
+
+#orgList {
+	max-width: 340px;
+	padding: 8px 0;
+}
+
+#orgList li {
+	line-height:30px;
+}
