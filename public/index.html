@@ -48,8 +48,8 @@
               <li data-bind="css:{active: isAbout()}" ><a href="#about">tuobA</a></li>
               <li data-bind="css:{active: isContact()}" ><a href="#contact">tcatnoC</a></li>
 			        <li> <form class="navbar-form pull-right" id="loginform" action="#login" method="post" data-bind="visible: !isLoggedIn()">
-	              <input type="text" class="span2" placeholder="email address" name="username" data-bind="value: email">
-	              <button type="submit" class="btn">sign in / register</button>
+	              <input  type="text" class="span2" placeholder="email address" name="username" data-bind="value: email" >
+	              <button id="sendloginemailbtn" type="submit" class="btn" data-loading-text="Sending email ...">sign in / register</button>
                 </form></li>
               <li data-bind="visible: isLoggedIn()" class='dropdown'>
                 <a href="#" role="button" data-toggle="dropdown" class="dropdown-toggle" ><span data-bind="text:name"></span> <b class='caret' ></b></a>
@@ -73,49 +73,61 @@
 
     <div class="container">
 
-		<div id="home" class="hide sections">
-		  <div data-bind="visible: !isLoggedIn()">
-			<h1>Bootstrap starter template</h1>
-			<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
+			<div id="home" class="hide sections">
+			  <div data-bind="visible: !isLoggedIn()">
+				<h1>Bootstrap starter template</h1>
+				<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
+				</div>
 			</div>
-		</div>
-		<div id="about" class="hide sections">
-			<h1>About</h1>
-		</div>
-		<div id="contact" class="hide sections">
-			<h1>Contact</h1>
-		</div>
-		<div id="preferences" class="hide sections">
-			<h1 data-bind="text:name"></h1>
-			<div data-bind="visible: isLoggedIn()">
-			  <h1>Preferences</h1>
-			  <div id="orgList" class="well">
-		      <ul class="nav nav-list">
-					  <li class="nav-header clearfix">Organisations <button data-toggle="modal" data-target="#addOrg" class='btn btn-small pull-right'>Add</button></li>
-					  <!-- ko foreach: organisations -->
-			        <li class="clearfix"><span data-bind="text: name"></span><span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removalUrl}">delete</a></span></li>
-					  <!-- /ko -->
-		      </ul>
-	      </div>
+			<div id="about" class="hide sections">
+				<h1>About</h1>
 			</div>
-    </div>
-    <div id="addOrg" class="modal hide fade"  role="dialog" >
-	    <form class='modal-form' method="post" action="#addOrg">
-	    <div class="modal-header">
-	            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-	            <h3>Add new Organisation</h3>
-	          </div>
-	          <div class="modal-body">
-	            <label>Name:</label>
-	            <input type="text" class="autofocus" value="" name="name" id="name" placeholder="Organisation name" data-bind="value: name,valueUpdate:'afterkeydown'"></input>
-	          </div>
-	          <div class="modal-footer">
-               <input data-bind="disable: hasNameError()" type="submit" class="btn btn-primary" value="Save changes" />
-	             <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
-	          </div>
-        </form>
+			<div id="contact" class="hide sections">
+				<h1>Contact</h1>
+			</div>
+			<div id="preferences" class="hide sections">
+				<h1 data-bind="text:name"></h1>
+				<div data-bind="visible: isLoggedIn()">
+				  <h1>Preferences</h1>
+				  <div id="orgList" class="well">
+			      <ul class="nav nav-list">
+						  <li class="nav-header clearfix">Organisations <button data-toggle="modal" data-target="#addOrg" class='btn btn-small pull-right'>Add</button></li>
+						  <!-- ko foreach: organisations -->
+				        <li class="clearfix"><span data-bind="text: name"></span><span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removalUrl}">delete</a></span></li>
+						  <!-- /ko -->
+			      </ul>
+		      </div>
+				</div>
+	    </div>
+	    <div id="addOrg" class="modal hide fade"  role="dialog" >
+		    <form class='modal-form' method="post" action="#addOrg">
+			    <div class="modal-header">
+			      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+			      <h3>Add new Organisation</h3>
+			    </div>
+			    <div class="modal-body">
+			      <label>Name:</label>
+			      <input type="text" class="autofocus" value="" name="name" id="name" placeholder="Organisation name" data-bind="value: name,valueUpdate:'afterkeydown'"></input>
+			    </div>
+			    <div class="modal-footer">
+		        <input data-bind="disable: hasNameError()" type="submit" class="btn btn-primary" value="Save changes" />
+			      <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+			    </div>
+	      </form>
+	    </div>
+	    <div id="loginemailsent"  class="modal hide fade"  role="dialog" >
+				<div class="modal-header">
+				  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+				  <h3>Login Email Sent</h3>
+				</div>
+				<div class="modal-body">
+				  <p>Check your inbox for further instructions</p>
+				</div>
+				<div class="modal-footer">
+				</div>
       </div>
-    </div> <!-- /container -->
+    </div> <!-- Container -->
+    
 
     <!-- Le javascript
     ================================================== -->

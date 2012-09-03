@@ -64,6 +64,10 @@ $(document).ready(function () {
                 self.organisations(ret);
                 self.name(user.name);
                 self.email(user.email);
+            } else {
+                self.organisations([]);
+                self.name(null);
+                self.email("");
             }
         };
         
@@ -102,6 +106,7 @@ $(document).ready(function () {
         self.go_to_home = function() { location.hash = "home" };
         self.go_to_about = function() { location.hash = "about" };
         self.go_to_contact = function() { location.hash = "contact" };
+        self.go_to_preferences = function() { location.hash = "preferences" };
         
         self.isHome =  ko.computed(function(){
             return self.navStatus() == "home";
@@ -112,28 +117,33 @@ $(document).ready(function () {
         self.isContact =  ko.computed(function(){
             return self.navStatus() == "contact";
         });
+        
         self.isUser = ko.computed(function(){
             return self.navStatus() == "user";
         });
         self.isLoggedIn = ko.computed(function(){
-            return self.user().isLoggedIn();
+            return self.user() ? self.user().isLoggedIn() : false;
         });
         self.name = ko.computed(function(){
             var user = self.user();
             return user ? user.name() : "";
         });
         self.login = function() {
+            jQuery("#sendloginemailbtn").button('loading');
             jQuery.ajax( {
                 url: "/api/login",
                 data: { email: self.email()},
                 success: function(data) {
-                    alert("Success : " + data);
+                    self.email("");
+                    jQuery("#loginemailsent").modal();
                 },
                 error: function(data) {
                     alert("Failure : " + data);
                 },
                 type: "post"
-            })
+            }).complete(function(){
+              jQuery("#sendloginemailbtn").button('reset');
+            });
             return false;
         }
         
@@ -192,7 +202,7 @@ $(document).ready(function () {
             jQuery.ajax({
                 url: '/api/logout',
                 success: function(data){
-                   self.user(null);
+                   self.user().updateUser(null);
                    self.go_to_home();
                 },
                 error: function(jqXHR, textStatus, errorThrown){
@@ -229,7 +239,7 @@ $(document).ready(function () {
         }).ajaxError(function(event, jqXHR, ajaxSettings, thrownError){
             if (jqXHR.status === 403) {
                 self.setTokenInStorage("");
-                self.user(null);
+                self.user().updateUser(null);
                 self.go_to_home();
             }
         });
@@ -256,10 +266,14 @@ $(document).ready(function () {
             });
             
             this.get('#home', function() {
-                self.org(null);
-                self.navStatus('home');
-                jQuery('.sections').hide();
-                jQuery('#home').show();
+                self.org().reset();
+                if (self.isLoggedIn() && self.user().organisations().length == 0) {
+                    self.go_to_preferences();
+                } else {
+	                self.navStatus('home');
+	                jQuery('.sections').hide();
+	                jQuery('#home').show();
+	              }
             });
             
             this.get('#home/:orgID', function() {
