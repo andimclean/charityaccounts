@@ -103,13 +103,29 @@ $(document).ready(function () {
         self.org = ko.observable(data['org']);
         
         //behaviour
-        self.go_to_home = function() { location.hash = "home" };
-        self.go_to_about = function() { location.hash = "about" };
-        self.go_to_contact = function() { location.hash = "contact" };
-        self.go_to_preferences = function() { location.hash = "preferences" };
+        function nextTick(next) {
+            return function () {
+                var argv = arguments;
+                setTimeout( function() {
+                    next.apply(self, argv);
+                }, 0);
+            }
+        }
         
+        self.go_to_home = nextTick(function() { location.hash = "home" });
+        self.go_to_about = nextTick(function() { location.hash = "about" });
+        self.go_to_contact = nextTick(function() { location.hash = "contact" });
+        self.go_to_preferences = nextTick(function() { location.hash = "preferences"});
+        self.go_to_org = nextTick(function(id) {
+            if (id) {
+                location.hash="org/"+id;
+            } else {
+                location.hash="org";
+            }
+        });
+                
         self.isHome =  ko.computed(function(){
-            return self.navStatus() == "home";
+            return self.navStatus() == "home" || self.navStatus() == "org";
         });
         self.isAbout =  ko.computed(function(){
             return self.navStatus() == "about";
@@ -153,7 +169,7 @@ $(document).ready(function () {
                 data: { token: token},
                 success: function(data) {
                     self.user().updateUser(data.obj);
-                    self.go_to_home();
+                    self.go_to_org();
                 },
                 error: function(data) {
                     alert("Failure : " + data);
@@ -182,7 +198,7 @@ $(document).ready(function () {
             self.setAjax();
         };
         
-        self.loadUser = function() {
+        self.loadUser = function(next) {
             jQuery.ajax({
                 url: '/api/getUser',
                 success: function(data){
@@ -195,7 +211,7 @@ $(document).ready(function () {
                         alert(errorThrown);
                     }
                 }
-            });
+            }).complete(next);
         };
         
         self.performLogout = function() {
@@ -243,80 +259,105 @@ $(document).ready(function () {
                 self.go_to_home();
             }
         });
-        var token = self.getTokenFromStorage();
-        if (token) {
-            self.setAjax();
-            self.loadUser();
-        }
         
         jQuery('.modal').on('shown', function () {
             jQuery(this).find('.autofocus').focus();
         });
-                
-        //setup
-        Sammy(function() {
-            this.before('', function() {
-                jQuery('.nav .dropdown.open').removeClass('open');
-                return true;
-            });
-            
-            this.post('#login',function() {
-                self.login();
-                return false;
-            });
-            
-            this.get('#home', function() {
-                self.org().reset();
-                if (self.isLoggedIn() && self.user().organisations().length == 0) {
-                    self.go_to_preferences();
-                } else {
+        self.setUpRoutes = function() {    //setup
+	        Sammy(function() {
+	            this.before('', function() {
+	                jQuery('.nav .dropdown.open').removeClass('open');
+	                return true;
+	            });
+	            
+	            this.post('#login',function() {
+	                self.login();
+	                return false;
+	            });
+	            
+	            this.get('#home', function() {
+	                self.org().reset();
+	                if (self.isLoggedIn())  {
+	                    var orgs = self.user().organisations(); 
+	                    if (orgs.length == 0) {
+	                      self.go_to_preferences();
+	                    } else {
+	                      self.go_to_org(orgs[0].id);
+	                    }
+	                } else {
+	                    self.navStatus('home');
+	                    jQuery('.sections').hide();
+	                    jQuery('#home').show();
+	                  }
+	            });
+	            
+	            this.get('#org', function() {
+	                //self.org().reset();
+	                if (self.isLoggedIn())  {
+	                    var orgs = self.user().organisations(); 
+	                    if (orgs.length == 0) {
+	                      self.go_to_preferences();
+	                    } else {
+	                      self.go_to_org(orgs[0].id);
+	                    }
+	                } else {
+	                    self.go_to_home();
+	                  }
+	            });
+	            
+	            this.get('#org/:orgID', function() {
+	                self.org(self.loadOrg(this.params['orgID']));
 	                self.navStatus('home');
 	                jQuery('.sections').hide();
 	                jQuery('#home').show();
+	            });
+	            this.get('#about', function() {
+	                self.navStatus('about');
+	                jQuery('.sections').hide();
+	                jQuery('#about').show();
+	            });
+	
+	            this.get('#contact', function() {
+	                self.navStatus('contact');
+	                jQuery('.sections').hide();
+	                jQuery('#contact').show();
+	            });
+	            
+	            this.get('#preferences', function() {
+	                self.navStatus('preferences');
+	                jQuery('.sections').hide();
+	                jQuery('#preferences').show();
+	            });
+	            this.get('#loginconfirm/:token',function() {
+	                self.performLogin(this.params['token']);
+	            });
+	            this.get('#logout',function(){
+	                self.performLogout();
+	            });
+	            this.post('#addOrg',function(){
+	                self.org().addOrg(self.user());
+	                self.org().reset();
+	            });
+	            this.get('#removeOrg/:id',function(){
+	                self.user().removeOrg(this.params['id']);
+	                history.back();
+	            });
+	            this.get('', function() { 
+	              if (self.isLoggedIn())  {
+	                self.go_to_org();
+	              } else {
+	                self.go_to_home()
 	              }
-            });
-            
-            this.get('#home/:orgID', function() {
-                self.org(self.loadOrg(this.params['orgID']));
-                self.navStatus('home');
-                jQuery('.sections').hide();
-                jQuery('#home').show();
-            });
-            this.get('#about', function() {
-                self.navStatus('about');
-                jQuery('.sections').hide();
-                jQuery('#about').show();
-            });
-
-            this.get('#contact', function() {
-                self.navStatus('contact');
-                jQuery('.sections').hide();
-                jQuery('#contact').show();
-            });
-            
-            this.get('#preferences', function() {
-                self.navStatus('preferences');
-                jQuery('.sections').hide();
-                jQuery('#preferences').show();
-            });
-            this.get('#loginconfirm/:token',function() {
-                self.performLogin(this.params['token']);
-            });
-            this.get('#logout',function(){
-                self.performLogout();
-            });
-            this.post('#addOrg',function(){
-                self.org().addOrg(self.user());
-                self.org().reset();
-            });
-            this.get('#removeOrg/:id',function(){
-                self.user().removeOrg(this.params['id']);
-                history.back();
-            });
-            this.get('', function() { self.go_to_home() });
-        }).run();
-        
-
+	              });
+	        }).run();
+        }
+        var token = self.getTokenFromStorage();
+        if (token) {
+            self.setAjax();
+            self.loadUser(self.setUpRoutes);
+        } else {
+          self.setUpRoutes();
+        }
     }
 
     var user = new User();
