@@ -125,7 +125,7 @@ $(document).ready(function () {
         });
                 
         self.isHome =  ko.computed(function(){
-            return self.navStatus() == "home" || self.navStatus() == "org";
+            return self.navStatus() == "home";
         });
         self.isAbout =  ko.computed(function(){
             return self.navStatus() == "about";
@@ -270,46 +270,57 @@ $(document).ready(function () {
 	                return true;
 	            });
 	            
+	            // Returns true if the path needs a login session to be used, false otherwise
+	            var isLoggedInPath = new function LoggedInPathTest() {
+                    this.test = function isLoggedInRoute(path) {
+                       var hash = path.replace(path.split('#')[0], '');
+	                   switch(hash) {
+	                       case '#home':
+	                       case '#about':
+	                       case '#contact':
+	                           return false;
+	                       default:
+	                           var match = (hash.slice(0, 13) != '#loginconfirm');
+	                           return match;
+	                   }
+	                   return false;
+	                };
+	            }();
+	            
+                this.before(isLoggedInPath, function (path) {
+                    if (!self.isLoggedIn())  {
+                        self.go_to_home();
+                        return false;
+                    } else {
+                        return true;
+                    }
+	            });
+	            
 	            this.post('#login',function() {
 	                self.login();
 	                return false;
 	            });
 	            
 	            this.get('#home', function() {
-	                self.org().reset();
-	                if (self.isLoggedIn())  {
-	                    var orgs = self.user().organisations(); 
-	                    if (orgs.length == 0) {
-	                      self.go_to_preferences();
-	                    } else {
-	                      self.go_to_org(orgs[0].id);
-	                    }
-	                } else {
-	                    self.navStatus('home');
-	                    jQuery('.sections').hide();
-	                    jQuery('#home').show();
-	                  }
+                    self.navStatus('home');
+                    jQuery('.sections').hide();
+                    jQuery('#home').show();
 	            });
 	            
 	            this.get('#org', function() {
-	                //self.org().reset();
-	                if (self.isLoggedIn())  {
-	                    var orgs = self.user().organisations(); 
-	                    if (orgs.length == 0) {
-	                      self.go_to_preferences();
-	                    } else {
-	                      self.go_to_org(orgs[0].id);
-	                    }
-	                } else {
-	                    self.go_to_home();
-	                  }
+                    var orgs = self.user().organisations(); 
+                    if (orgs.length == 0) {
+                      self.go_to_preferences();
+                    } else {
+                      self.go_to_org(orgs[0].id);
+                    }
 	            });
 	            
 	            this.get('#org/:orgID', function() {
 	                self.org(self.loadOrg(this.params['orgID']));
-	                self.navStatus('home');
+	                self.navStatus('org');
 	                jQuery('.sections').hide();
-	                jQuery('#home').show();
+	                jQuery('#org').show();
 	            });
 	            this.get('#about', function() {
 	                self.navStatus('about');
@@ -343,12 +354,8 @@ $(document).ready(function () {
 	                history.back();
 	            });
 	            this.get('', function() { 
-	              if (self.isLoggedIn())  {
 	                self.go_to_org();
-	              } else {
-	                self.go_to_home()
-	              }
-	              });
+                });
 	        }).run();
         }
         var token = self.getTokenFromStorage();

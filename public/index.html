@@ -44,7 +44,6 @@
           <a class="brand" href="#">Charity Accounts</a>
           <div class="nav-collapse collapse">
             <ul class="nav">
-              <li data-bind="css:{active: isHome()}" class="active"><a href="#home">Home</a></li>
               <li data-bind="css:{active: isAbout()}" ><a href="#about">tuobA</a></li>
               <li data-bind="css:{active: isContact()}" ><a href="#contact">tcatnoC</a></li>
 			        <li> <form class="navbar-form pull-right" id="loginform" action="#login" method="post" data-bind="visible: !isLoggedIn()">
@@ -74,7 +73,7 @@
     <div class="container">
 
 			<div id="home" class="hide sections">
-			  <div data-bind="visible: !isLoggedIn()">
+			  <div>
 				<h1>Bootstrap starter template</h1>
 				<p>Use this document as a way to quick start any new project.<br> All you get is this message and a barebones HTML document.</p>
 				</div>
