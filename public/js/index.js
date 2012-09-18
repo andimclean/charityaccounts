@@ -3,7 +3,7 @@ $(document).ready(function () {
     function Organisation(data) {
         var self = this;
         data = data || {};
-        self.id = data['_id'];
+        self.id = ko.observable(data['_id']);
         self.name = ko.observable(data['name']|| "");
         self.errorName = ko.observable("");
         
@@ -15,7 +15,11 @@ $(document).ready(function () {
             self.name("");
             self.errorName("");
         };
-                
+        self.update = function(data) {
+            self.id(data['_id']);
+            self.name(data['name']|| "");
+            self.errorName("");
+        }
         self.addOrg = function(user) {
             var data = self.name();
           
@@ -36,11 +40,11 @@ $(document).ready(function () {
         };
         
         self.removalUrl = ko.computed(function(){
-            return "#removeOrg/"+self.id;
+            return "#in/removeOrg/"+self.id;
         });
         
         self.orgUrl =  ko.computed(function(){
-            return "#home/"+self.id;
+            return "#in/org/"+self.id;
         }); 
     }
     
@@ -99,8 +103,9 @@ $(document).ready(function () {
         data = data || {}
         self.email = ko.observable("");
         self.navStatus = ko.observable("home");
-        self.user = ko.observable(data['user'] || new User());
-        self.org = ko.observable(data['org']);
+        self.user = ko.observable(new User());
+        self.newOrg = ko.observable(new Organisation());
+        self.currentOrg = ko.observable(new Organisation());
         
         //behaviour
         function nextTick(next) {
@@ -115,12 +120,12 @@ $(document).ready(function () {
         self.go_to_home = nextTick(function() { location.hash = "home" });
         self.go_to_about = nextTick(function() { location.hash = "about" });
         self.go_to_contact = nextTick(function() { location.hash = "contact" });
-        self.go_to_preferences = nextTick(function() { location.hash = "preferences"});
+        self.go_to_preferences = nextTick(function() { location.hash = "in/preferences"});
         self.go_to_org = nextTick(function(id) {
             if (id) {
-                location.hash="org/"+id;
+                location.hash="in/org/"+id;
             } else {
-                location.hash="org";
+                location.hash="in/org";
             }
         });
                 
@@ -234,7 +239,7 @@ $(document).ready(function () {
         };
 
         self.resetOrg = function() {
-            self.org().reset();
+            self.newOrg().reset();
         };
         
         self.loadOrg = function(orgID) {
@@ -242,7 +247,7 @@ $(document).ready(function () {
                 url: '/api/getOrg/' + orgID,
                 type: 'get',
                 success: function(data) {
-                    self.org(new Organisation(data.obj));
+                    self.currentOrg().update(data.obj);
                 }
             });
         }
@@ -269,31 +274,16 @@ $(document).ready(function () {
 	                jQuery('.nav .dropdown.open').removeClass('open');
 	                return true;
 	            });
-	            
-	            // Returns true if the path needs a login session to be used, false otherwise
-	            var isLoggedInPath = new function LoggedInPathTest() {
-                    this.test = function isLoggedInRoute(path) {
-                       var hash = path.replace(path.split('#')[0], '');
-	                   switch(hash) {
-	                       case '#home':
-	                       case '#about':
-	                       case '#contact':
-	                           return false;
-	                       default:
-	                           var match = (hash.slice(0, 13) != '#loginconfirm');
-	                           return match;
-	                   }
-	                   return false;
-	                };
-	            }();
-	            
-                this.before(isLoggedInPath, function (path) {
-                    if (!self.isLoggedIn())  {
-                        self.go_to_home();
-                        return false;
-                    } else {
-                        return true;
-                    }
+	          
+                this.before(
+                    {path: ['#in/.*']},
+                    function (path) {
+	                    if (!self.isLoggedIn())  {
+	                        self.go_to_home();
+	                        return false;
+	                    } else {
+	                        return true;
+	                    }
 	            });
 	            
 	            this.post('#login',function() {
@@ -307,7 +297,7 @@ $(document).ready(function () {
                     jQuery('#home').show();
 	            });
 	            
-	            this.get('#org', function() {
+	            this.get('#in/org', function() {
                     var orgs = self.user().organisations(); 
                     if (orgs.length == 0) {
                       self.go_to_preferences();
@@ -316,8 +306,8 @@ $(document).ready(function () {
                     }
 	            });
 	            
-	            this.get('#org/:orgID', function() {
-	                self.org(self.loadOrg(this.params['orgID']));
+	            this.get('#in/org/:orgID', function() {
+	                self.loadOrg(this.params['orgID']);
 	                self.navStatus('org');
 	                jQuery('.sections').hide();
 	                jQuery('#org').show();
@@ -334,7 +324,7 @@ $(document).ready(function () {
 	                jQuery('#contact').show();
 	            });
 	            
-	            this.get('#preferences', function() {
+	            this.get('#in/preferences', function() {
 	                self.navStatus('preferences');
 	                jQuery('.sections').hide();
 	                jQuery('#preferences').show();
@@ -342,14 +332,14 @@ $(document).ready(function () {
 	            this.get('#loginconfirm/:token',function() {
 	                self.performLogin(this.params['token']);
 	            });
-	            this.get('#logout',function(){
+	            this.get('#in/logout',function(){
 	                self.performLogout();
 	            });
-	            this.post('#addOrg',function(){
-	                self.org().addOrg(self.user());
-	                self.org().reset();
+	            this.post('#in/addOrg',function(){
+	                self.newOrg().addOrg(self.user());
+	                self.newOrg().reset();
 	            });
-	            this.get('#removeOrg/:id',function(){
+	            this.get('#in/removeOrg/:id',function(){
 	                self.user().removeOrg(this.params['id']);
 	                history.back();
 	            });
@@ -367,15 +357,10 @@ $(document).ready(function () {
         }
     }
 
-    var user = new User();
-    var org = new Organisation();
-
-    var app = new AppViewModel({
-        user: user,
-        org: org
-    });
+    var app = new AppViewModel();
     ko.applyBindings(app, document.getElementById("navigation"));
-    ko.applyBindings(user, document.getElementById("preferences"));
-    ko.applyBindings(user, document.getElementById("home"));
-    ko.applyBindings(org, document.getElementById("addOrg"));
+    ko.applyBindings(app.user(), document.getElementById("preferences"));
+    ko.applyBindings(app.user(), document.getElementById("home"));
+    ko.applyBindings(app.newOrg(), document.getElementById("addOrg"));
+    ko.applyBindings(app.currentOrg(), document.getElementById("org"));
 });

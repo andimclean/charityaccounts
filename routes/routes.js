@@ -301,13 +301,17 @@ function getOrg(req,res) {
     }
     step(
         function getOrg() {
-            db.organisations.findOne(orgID, this);
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this);
         },
         function foundOrg(err,data) {
             if (err) {
                sendFailure(res,err);
             } else {
-               sendSuccess(res,data);
+              if (!data) {
+                sendFailure(res,new Error("Organisation not found: "+orgID));
+              } else {
+                sendSuccess(res,data);
+              }
             }
         }
     );
