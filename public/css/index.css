@@ -37,3 +37,19 @@
 #orgList li {
 	line-height:30px;
 }
+
+#accountList {
+	max-width: 340px;
+}
+
+.negative {
+	color: red;
+}
+
+.negative:before {
+	content: "(";
+}
+
+.negative:after {
+	content: ")";
+}

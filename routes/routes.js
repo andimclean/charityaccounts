@@ -316,6 +316,96 @@ function getOrg(req,res) {
         }
     );
 }
+
+function addAccount(req,res) {
+    var accountName = req.body.account;
+    var orgID = req.body.org;
+    
+    if (!orgID) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    if (!accountName) {
+        sendFailure(res,"Invalid Account Details");
+        return;
+    }
+    
+    var org;
+    var id;
+    step(
+        function getOrg() {
+            crypto.randomBytes(32,this.parallel());
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this.parallel());
+        },
+        function foundOrg(err,bytes,data) {
+            if (err) throw err;
+            if (!data)  throw new Error("Organisation not found: "+orgID);
+            if (!bytes) throw new Error("ID not generated");
+            
+            id = bytes.toString("hex");;
+            org = data;
+            org.accounts = org.accounts || [];
+            
+            org.accounts.push({
+                id: id,
+                name: accountName,
+                balance: 0
+            });
+            
+            db.organisations.save(org,this);
+        
+        },
+        function savedOrg(err,data) {
+            if (err) {
+                sendFailure(res,err);
+            } else {
+                sendSuccess(res,org);
+            }
+        }
+    );
+}
+
+function removeAccount(req,res) {
+    var orgID = req.body.orgid;
+    if (!orgID) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    var accountID = req.body.accountid;
+    if (!accountID) {
+        sendFailure(res,"Invalid AccountId");
+    }
+    
+    console.log("Remove Account Id : " + orgID + ":" + accountID);
+    var org;
+    step(
+        function getOrg() {
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this);
+        },
+        function foundOrg(err,data) {
+            if (err) throw err;
+            if (!data)  throw new Error("Organisation not found: "+orgID);
+            
+            org = data;
+            org.accounts = org.accounts || [];
+            
+            org.accounts = _.filter(org.accounts,function(item) {
+                return accountID != item.id;
+            });
+
+            db.organisations.save(org,this);
+        
+        },
+        function savedOrg(err,data) {
+            if (err) {
+                sendFailure(res,err);
+            } else {
+                sendSuccess(res,org);
+            }
+        }
+    );
+}
+
 exports.bind = function bindRoutes(app) {
     db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations"]);
 	app.get('/', index);
@@ -327,5 +417,7 @@ exports.bind = function bindRoutes(app) {
 	app.post('/api/logout',parseSession,logout);
 	app.post('/api/addOrg',parseSession,addOrg);
 	app.post('/api/removeOrg',parseSession,removeOrg);
+	app.post('/api/addAccount',parseSession,addAccount);
+	app.post('/api/removeAccount', parseSession,removeAccount);
 };
 

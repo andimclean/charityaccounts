@@ -1,12 +1,33 @@
 $(document).ready(function () {
-
+    function Account(data) {
+        var self = this;
+        data = data || {};
+        self.id = ko.observable(data['id']);
+        self.name = ko.observable(data['name'] || "");
+        self.balance = ko.observable(data['balance'] || 0);
+        
+        self.removeUrl = ko.computed(function(){
+            return "#in/removeAccount/"+self.id();
+        });
+        
+        self.hasNameError = ko.computed(function(){
+            return self.name().length == 0;
+        });
+        
+        self.reset = function() {
+	        self.id("");
+	        self.name("");
+	        self.balance(0);
+        }
+    }
+    
     function Organisation(data) {
         var self = this;
         data = data || {};
         self.id = ko.observable(data['_id']);
         self.name = ko.observable(data['name']|| "");
         self.errorName = ko.observable("");
-        
+        self.accounts = ko.observableArray(data['accounts'] || []);
         self.hasNameError = ko.computed(function(){
             return self.name().length == 0 || self.errorName().length > 0;
         });
@@ -19,6 +40,13 @@ $(document).ready(function () {
             self.id(data['_id']);
             self.name(data['name']|| "");
             self.errorName("");
+            var accounts = data['accounts'] || [];
+            
+            var newAccounts = [];
+            for(var loop = 0; loop < accounts.length; ++loop) {
+                newAccounts.push(new Account(accounts[loop]));
+            }
+            self.accounts(newAccounts);
         }
         self.addOrg = function(user) {
             var data = self.name();
@@ -40,12 +68,45 @@ $(document).ready(function () {
         };
         
         self.removalUrl = ko.computed(function(){
-            return "#in/removeOrg/"+self.id;
+            return "#in/removeOrg/"+self.id();
         });
         
         self.orgUrl =  ko.computed(function(){
-            return "#in/org/"+self.id;
+            return "#in/org/"+self.id();
         }); 
+        
+        self.addAccount = function(account) {
+            var data = account.name();
+            if (data) {
+                jQuery.ajax({
+                    url: '/api/addAccount',
+                    data: {account: data,org: self.id()},
+                    success: function(data) {
+                        app.currentOrg().update(data.obj);
+                        jQuery('#addAccount').modal('hide')
+                    },
+                    type: 'post'
+                });
+            }
+        };
+        
+        self.removeAccount = function(accountId) {
+            var item = self.accounts.arrayFirst(function(item){
+                return item.id()==accountId;
+            });
+            if (item) {
+                if (confirm("Remove Account " + item.name() + "?")) {
+                    jQuery.ajax({
+                        url: "/api/removeAccount",
+                        data: {accountid: accountId, orgid: self.id()},
+                        type: "post",
+                        success: function(data) {
+                            self.update(data['obj']);
+                        }
+                    });
+                }
+            }
+        };
     }
     
     function User(data) {
@@ -82,7 +143,7 @@ $(document).ready(function () {
         
         self.removeOrg = function(id) {
             var item = self.organisations.arrayFirst(function(item){
-                return id==item.id;
+                return id==item.id();
             });
             if (item) {
                 if (confirm("Remove Organisation " + item.name() + "?")) {
@@ -106,6 +167,7 @@ $(document).ready(function () {
         self.user = ko.observable(new User());
         self.newOrg = ko.observable(new Organisation());
         self.currentOrg = ko.observable(new Organisation());
+        self.newAccount = ko.observable(new Account());
         
         //behaviour
         function nextTick(next) {
@@ -302,7 +364,7 @@ $(document).ready(function () {
                     if (orgs.length == 0) {
                       self.go_to_preferences();
                     } else {
-                      self.go_to_org(orgs[0].id);
+                      self.go_to_org(orgs[0].id());
                     }
 	            });
 	            
@@ -343,6 +405,14 @@ $(document).ready(function () {
 	                self.user().removeOrg(this.params['id']);
 	                history.back();
 	            });
+	            this.post('#in/addAccount',function() {
+	                self.currentOrg().addAccount(self.newAccount());
+	                self.newAccount().reset();
+	            });
+                this.get('#in/removeAccount/:id',function(){
+                    self.currentOrg().removeAccount(this.params['id']);
+                    history.back();
+                });
 	            this.get('', function() { 
 	                self.go_to_org();
                 });
@@ -363,4 +433,5 @@ $(document).ready(function () {
     ko.applyBindings(app.user(), document.getElementById("home"));
     ko.applyBindings(app.newOrg(), document.getElementById("addOrg"));
     ko.applyBindings(app.currentOrg(), document.getElementById("org"));
+    ko.applyBindings(app.newAccount(), document.getElementById("addAccount"));
 });
