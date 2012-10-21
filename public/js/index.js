@@ -167,6 +167,7 @@ $(document).ready(function () {
         self.user = ko.observable(new User());
         self.newOrg = ko.observable(new Organisation());
         self.currentOrg = ko.observable(new Organisation());
+        self.currentAcc = ko.observable(new Account());
         self.newAccount = ko.observable(new Account());
         
         //behaviour
@@ -183,9 +184,11 @@ $(document).ready(function () {
         self.go_to_about = nextTick(function() { location.hash = "about" });
         self.go_to_contact = nextTick(function() { location.hash = "contact" });
         self.go_to_preferences = nextTick(function() { location.hash = "in/preferences"});
-        self.go_to_org = nextTick(function(id) {
-            if (id) {
-                location.hash="in/org/"+id;
+        self.go_to_org = nextTick(function(orgID,accID) {
+            if (orgID && accID) {
+                location.hash="in/org/"+orgID+"/"+accID;
+            } else if (orgID ){
+                location.hash="in/org/"+orgID;
             } else {
                 location.hash="in/org";
             }
@@ -304,12 +307,22 @@ $(document).ready(function () {
             self.newOrg().reset();
         };
         
-        self.loadOrg = function(orgID) {
+        self.loadOrg = function(orgID , next) {
             jQuery.ajax({
                 url: '/api/getOrg/' + orgID,
                 type: 'get',
                 success: function(data) {
                     self.currentOrg().update(data.obj);
+                    next();
+                }
+            });
+        }
+        self.loadAcc = function(orgID , accID) {
+            jQuery.ajax({
+                url: '/api/getAcc/' + orgID + '/'+accID,
+                type: 'get',
+                success: function(data) {
+                    self.currentAcc().update(data.obj);
                 }
             });
         }
@@ -369,11 +382,35 @@ $(document).ready(function () {
 	            });
 	            
 	            this.get('#in/org/:orgID', function() {
-	                self.loadOrg(this.params['orgID']);
+	               var orgID = this.params['orgID'];
+	                self.loadOrg(
+	                   orgID,
+	                   function() {
+	                       var accounts = self.currentOrg().accounts();
+	                       if (accounts.length > 0) {
+	                           var accID = accounts[0].id();
+	                           self.go_to_org(orgID,accID);
+	                       }
+	                   }
+	                );
 	                self.navStatus('org');
 	                jQuery('.sections').hide();
 	                jQuery('#org').show();
 	            });
+	            
+	            this.get('#in/org/:orgID/:accID', function() {
+	                var orgID = this.params['orgID'];
+	                var accID = this.params['accID']; 
+                    self.loadOrg(
+                        orgID,
+                        function() {
+                            self.loadAcc(orgID,accID);
+                        }
+                    );
+                    self.navStatus('org');
+                    jQuery('.sections').hide();
+                    jQuery('#org').show();
+                });
 	            this.get('#about', function() {
 	                self.navStatus('about');
 	                jQuery('.sections').hide();

@@ -2,6 +2,9 @@
 /*
  * GET home page.
  */
+var removeOnLogin = false; 
+ 
+ 
 var crypto = require("crypto");
 var mailer = require("nodemailer");
 var mongo = require("mongojs");
@@ -100,17 +103,20 @@ function loginConfirm(req,res) {
             }
             
             return data;
-        },/*
+        },
         function markTokenUsed(err,data) {
             if (err) throw err;
             tokenData = data;
-            db.logintokens.remove({token:token}, this);
-        },*/
+             
+            if (removeOnLogin) {
+	            db.logintokens.remove({token:token}, this);
+            } else {
+                return data;
+            }
+        },
         function getUserDetails(err,data) {
             if (err) throw err;
-            tokenData = data;
             db.users.findOne({email: tokenData.email},this);
-            
         },
         function setupNewUser(err,data) {
             if (err) throw err;
@@ -317,6 +323,38 @@ function getOrg(req,res) {
     );
 }
 
+function getTransactions(req,res) {
+    var orgID = req.params.orgid;
+    if (!orgID) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    
+    var accID = req.params.accid;
+    if (!accID) {
+        sendFailure(res,"Invalid Account");
+        return;
+    }
+    
+    var fromTxn = req.params.from;
+    if (!fromTxn) {
+        sendFailure(res, "Invalid Transaction");
+        return
+    }
+    
+    var countTxn = req.params.count;
+    if (!countTxn) {
+        sendFailure(res, "Invalid Transaction Count");
+        return;
+    }
+            
+    step(
+        function getTxn() {
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this.parallel());
+        },
+        function 
+}
+
 function addAccount(req,res) {
     var accountName = req.body.account;
     var orgID = req.body.org;
@@ -407,11 +445,12 @@ function removeAccount(req,res) {
 }
 
 exports.bind = function bindRoutes(app) {
-    db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations"]);
+    db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations","transactions"]);
 	app.get('/', index);
 	app.get('/api/getUser',parseSession,getUser);
     app.get('/api/getOrg/:orgid',parseSession,getOrg);
-    
+    app.get('/api/getAcc/:orgid/:accid',parseSession,getAcc);
+
     app.post('/api/login',login);
 	app.post('/api/loginConfirm',loginConfirm);
 	app.post('/api/logout',parseSession,logout);
