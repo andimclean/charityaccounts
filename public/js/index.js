@@ -128,7 +128,8 @@ $(document).ready(function () {
     function Organisation(data,user) {
         var self = this;
         data = data || {};
-        
+        self.amount_in = '';
+        self.amount_out = '';
         self.id = ko.observable(data['_id']);
         self.name = ko.observable(data['name']|| "");
         self.errorName = ko.observable("");
@@ -187,8 +188,8 @@ $(document).ready(function () {
             var data = account.name();
             if (data) {
                 jQuery.ajax({
-                    url: '/api/addAccount',
-                    data: {account: data,org: self.id()},
+                    url: '/api/addAccount/' + self.id(),
+                    data: {accountname: data},
                     success: function(data) {
                         app.currentOrg().update(data.obj);
                         jQuery('#addAccount').modal('hide')
@@ -205,8 +206,7 @@ $(document).ready(function () {
             if (item) {
                 if (confirm("Remove Account " + item.name() + "?")) {
                     jQuery.ajax({
-                        url: "/api/removeAccount",
-                        data: {accountid: accountId, orgid: self.id()},
+                        url: "/api/removeAccount/" + self.id() + "/" + accountId,
                         type: "post",
                         success: function(data) {
                             self.update(data['obj']);
@@ -259,8 +259,7 @@ $(document).ready(function () {
             if (item) {
                 if (confirm("Remove Organisation " + item.name() + "?")) {
                     jQuery.ajax({
-                        url: "/api/removeOrg",
-                        data: {orgid: id},
+                        url: "/api/removeOrg/" + id,
                         type: "post",
                         success: function(data) {
                             self.updateUser(data['obj']);
