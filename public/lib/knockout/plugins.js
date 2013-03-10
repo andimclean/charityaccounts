@@ -41,36 +41,43 @@ $(function() {
             var value = valueAccessor();
             var valueUnwrapped = ko.utils.unwrapObservable(value);
             if(valueUnwrapped) {
-                $(element).text(moment(valueUnwrapped).calendar());
+                $(element).text(moment(valueUnwrapped).format('YYYY-MM-DD'));
             }
         }
     }
     
     ko.moneyObservable =(function ($) {
+    
+        var currency = null;
 	    var cleanInput = function (value) {
+	        if (value == '') { return value;}
 	        return parseFloat(value.replace(/[^0-9.-]/g, ''));
 	    };
 	
 	    var format = function (value) {
-	        toks = value.toFixed(2).replace('-', '').split('.');
+	        if (value == null) { return '';}
+	        if (value === 0) { return currency() + '0.00';}
+	        if (value == '') {return '';}
+            var toks = value.toFixed(2).replace('-', '').split('.');
 	        var display = $.map(toks[0].split('').reverse(), function (elm, i) {
 	            return [(i % 3 == 0 && i > 0 ? ',' : ''), elm];
 	        }).reverse().join('');
 	
-            return [value , '.' , toks[1]].join('.')
+            return currency() + [display ,  toks[1]].join('.')
 	    };
 	    
-	    return function(initialValue){
+	    return function(initialValue , curr){
 	        var raw = typeof initialValue == "function"? 
 	            ko.dependentObservable(initialValue) : ko.observable(initialValue);
-	
+	        currency = typeof curr == 'function'?
+	            ko.dependentObservable(curr) : ko.observable(curr);
 	        var public=ko.dependentObservable({
-	            read:function(){return raw()},
+	            read:function(){return format(raw())},
 	            write:function(value){raw(cleanInput(value))}            
 	        });
 	        
 	        public.formatted=ko.dependentObservable({
-	            read:function(){return format(raw())},
+	            read:function(){return format( raw())},
 	            write:function(value){raw(cleanInput(value))} 
 	        });
 	        return public;

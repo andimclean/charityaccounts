@@ -117,7 +117,7 @@
                 <!-- ko foreach: accounts -->
                   <li class="clearfix">
                     <span><a data-bind="text: name, attr: { href: accURL}"></a></span>
-                    <span><a data-bind="text: balance, css:{ negative : balance() < 0},attr: { href: accURL}"></a></span>
+                    <span><a data-bind="text: formattedbalance, css:{ negative : balance() < 0},attr: { href: accURL}"></a></span>
                     <span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removeUrl}">delete</a></span>
                   </li>
                 <!-- /ko -->

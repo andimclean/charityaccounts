@@ -26,27 +26,31 @@ $(document).ready(function () {
         self.description = ko.observable(data['description']);
         self.user = ko.observable(user);
         
-        self.amount_in = ko.computed({
-            read: function () {
-                if (self.amount() >= 0) {
-                    return self.user().preferences().currency() + format(self.amount());
-                } else {
-                    return '';
-                }
-            },
-            deferEvaluation: true
-        });
+        self.amount_in = ko.moneyObservable( 
+	        ko.computed({
+	            read: function () {
+	                if (self.amount() >= 0) {
+	                    return self.amount();
+	                } else {
+	                    return '';
+	                }
+	            },
+	            deferEvaluation: true
+	        }
+        ),user.preferences().currency);
 
-        self.amount_out = ko.computed({
-            read: function () {
-                if (self.amount() < 0) {
-                    return self.user().preferences().currency() + format(self.amount());
-                } else {
-                    return '';
-                }
-            },
-            deferEvaluation: true
-        });
+        self.amount_out = ko.moneyObservable( 
+            ko.computed({
+                read: function () {
+                    if (self.amount() < 0) {
+                        return self.amount();
+                    } else {
+                        return '';
+                    }
+                },
+                deferEvaluation: true
+            }
+        ),user.preferences().currency)
         
       var format = function (value) {
         toks = value.toFixed(2).replace('-', '').split('.');
@@ -64,6 +68,7 @@ $(document).ready(function () {
         self.id = ko.observable();
         self.name = ko.observable('');
         self.balance = ko.observable();
+        self.formattedbalance = ko.moneyObservable(self.balance , user.preferences().currency);
         self.org = ko.observable();
         self.accURL = ko.computed(function() {
         	return '#in/org/' + self.org()+'/' + self.id();
@@ -80,7 +85,7 @@ $(document).ready(function () {
         self.update = function(data) {
             self.id(data['id']);
             self.name(data['name'] || 'Untitled');
-            self.balance(data['balance'] || 0);
+            self.balance(data['balance'] / 100 || 0);
             self.org(data['org']);
         }
         

@@ -392,9 +392,12 @@ var addTransaction = {
 	                amount: amount
 	            };
 	            
-	            db.transactions.save(txn,this);
+	            db.transactions.save(txn,this.parallel());
+	            
+	            req.acc.balance += amount;
+	            db.organisations.save(req.org, this.parallel());
 	        },
-	        function savedTxn(err,data) {
+	        function savedTxn(err,txndata, orgdata) {
 	            if (err) {
 	                rh.sendFailure(res,err);
 	            } else {
@@ -404,6 +407,7 @@ var addTransaction = {
 	    );
 	}
 };
+
 
 
 exports.bind = function bindRoutes(app) {
