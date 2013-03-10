@@ -260,14 +260,8 @@ var getOrg = {
 };
 
 var getTransactions = {
-    mw: [mw.session, mw.user, mw.org],
+    mw: [mw.session, mw.user, mw.org, mw.acc],
     handler: function(req,res) {
-	    var accID = req.params.accid;
-	    if (!accID) {
-	        rh.sendFailure(res,"Invalid Account");
-	        return;
-	    }
-	    
 	    var fromTxn = parseInt(req.params.from);
 	    
 	    var countTxn = parseInt(req.params.count);
@@ -277,20 +271,15 @@ var getTransactions = {
 	    }
 	            
 	    var id;
-	    var acc;
 	    var txn;
 	    step(
 	        function checkAccount() {
-	            acc = _.find(req.org.accounts, function(account) { return account.id === accID; });
-	            
-	            if (!acc) throw new Error('Unable to find account: ' + accID);
-	            
-	            db.transactions.find({orgid: req.org._id, accid:accID})
+	            db.transactions.find({orgid: req.org._id, accid:req.acc.id})
 	                .sort({date: -1})
 	                .skip(fromTxn)
 	                .limit(countTxn)
 	                .toArray(this.parallel());
-	            db.transactions.find({orgid: req.org._id, accid:accID})
+	            db.transactions.find({orgid: req.org._id, accid:req.acc.id})
 	                .count(this.parallel());
 	        },
 	        function sendData(err, transactions , size) {
@@ -332,7 +321,6 @@ var addAccount = {
 	            });
 	            
 	            db.organisations.save(req.org,this);
-	        
 	        },
 	        function savedOrg(err,data) {
 	            if (err) {
@@ -346,19 +334,13 @@ var addAccount = {
 };
 
 var removeAccount = {
-    mw: [mw.session, mw.user, mw.org],
+    mw: [mw.session, mw.user, mw.org, mw.acc],
     handler: function(req,res) {
-	    var accountID = req.params.accid;
-	    if (!accountID) {
-	        rh.sendFailure(res,"Invalid AccountId");
-	        return;
-	    }
-	    
-	    console.log("Remove Account Id : " + req.org._id + ":" + accountID);
+	    console.log("Remove Account Id : " + req.org._id + ":" + req.acc.id);
 	    step(
 	        function findAccount() {
 	            req.org.accounts = _.filter(req.org.accounts,function(item) {
-	                return accountID != item.id;
+	                return req.acc.id != item.id;
 	            });
 	
 	            db.organisations.save(req.org,this);
@@ -375,64 +357,36 @@ var removeAccount = {
 };
 
 var getAcc = {
-    mw: [mw.session, mw.user, mw.org],
+    mw: [mw.session, mw.user, mw.org, mw.acc],
     handler: function(req, res) {
-	    var accountID = req.params.accid;
-	    if (!accountID) {
-	    	console.log('Account ID is null');
-	        rh.sendFailure(res,"Invalid AccountId");
-	        return;
-	    }
-	    
-	    console.log("Find Account Id : " + req.org._id + ":" + accountID);
-	
-	    var accounts = _.filter(req.org.accounts,function(item) {
-	        return accountID == item.id;
-	    });
-	
-	    if (accounts.length != 1) {
-	    	rh.sendFailure(res,new Error("Account not found"));
-	    	return;
-	    }
-		rh.sendSuccess(res,accounts[0]);
+		rh.sendSuccess(res,req.acc);
 	}
 };
 
 var addTransaction = {
-    mw: [mw.session, mw.user, mw.org],
+    mw: [mw.session, mw.user, mw.org, mw.acc],
     handler: function(req,res) {
-	    var accID = req.params.accid;
-	    
-	    if (!accID) {
-	        rh.sendFailure(res,"Invalid Account");
-	        return;
-	    }
-	    
 	    var id;
-	    var acc;
 	    var txn;
 	    step(
 	        function getCreateTxnId() {
-	            crypto.randomBytes(32,this.parallel());
+	            rh.makeId(db.transactions, '{"id":"$ID"}', this);
 	        },
-	        function createdTxnId(err,bytes) {
+	        function createdTxnId(err,newid) {
 	            if (err) throw err;
-	            if (!bytes) throw new Error("ID not generated");
-	            
-	            id = bytes.toString("hex");
-	            acc = _.find(req.org.accounts, function(account) { return account.id === accID; });
-	            
-	            if (!acc) { throw new Error("Account not found: " + accID); }
-	            
+	            if (!newid) throw new Error("ID not generated");
+	           
+	            id = newid;
+	           
 	            var amount = parseFloat(req.body.amount) * 100;
 	            if (req.body.transfered == 'out') {
 	                amount *= -1;
 	            }
-	            
+	           
 	            txn = {
 	                id: id,
 	                orgid: req.org._id,
-	                accid: accID,
+	                accid: req.acc.id,
 	                date: Date.parse(req.body.date),
 	                description: req.body.description,
 	                amount: amount

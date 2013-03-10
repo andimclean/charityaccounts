@@ -6,6 +6,7 @@
     var rh = require('./routehelpers'),
         step = require('step'),
         mongo = require('mongojs'),
+        _ = require('underscore'),
         db = null;
     
     module.exports.setDb = function(pdb) {
@@ -86,5 +87,28 @@
 	            next();
 	        }
 	    );
+	};
+	
+	module.exports.acc = function(req, res, next) {
+    	var acc, accID;
+	
+        if (!req.org) {
+            rh.sendFailure(res, "Organisation not loaded");
+        }
+
+        accID = req.params.accid;
+
+        if (!accID) {
+            rh.sendFailure(res,"Invalid Account");
+            return;
+        }
+        
+	    acc = _.find(req.org.accounts, function(account) { return account.id === accID; });
+	    
+	    if (!acc) { throw new Error("Account not found: " + accID); }
+	    
+	    req.acc = acc;
+	    
+	    next();
 	};
 })();
