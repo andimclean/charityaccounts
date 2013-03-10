@@ -1,29 +1,134 @@
 $(document).ready(function () {
-    function Account(data) {
+    function Preferences() {
+      var self = this;
+      
+      var prefs = [{name: 'currency', defval: '£'}];
+      
+      ko.utils.arrayForEach(prefs, function(pref) {
+          self[pref.name] = ko.observable(pref.defval || '');
+      });
+      
+      self.update = function(data) {
+        data = data || {};
+	      ko.utils.arrayForEach(prefs, function(pref) {
+	          self[pref.name](data[pref] || pref.defval || '');
+	      });
+      }
+    }
+    
+    function Transaction(data, account_id , user) {
         var self = this;
         data = data || {};
-        self.id = ko.observable(data['id']);
-        self.name = ko.observable(data['name'] || "");
-        self.balance = ko.observable(data['balance'] || 0);
         
+        self.id = ko.observable(data['id']);
+        self.date = ko.observable(data['date']);
+        self.amount = ko.observable(data['amount'] / 100);
+        self.description = ko.observable(data['description']);
+        self.user = ko.observable(user);
+        
+        self.amount_in = ko.computed({
+            read: function () {
+                if (self.amount() >= 0) {
+                    return self.user().preferences().currency() + format(self.amount());
+                } else {
+                    return '';
+                }
+            },
+            deferEvaluation: true
+        });
+
+        self.amount_out = ko.computed({
+            read: function () {
+                if (self.amount() < 0) {
+                    return self.user().preferences().currency() + format(self.amount());
+                } else {
+                    return '';
+                }
+            },
+            deferEvaluation: true
+        });
+        
+      var format = function (value) {
+        toks = value.toFixed(2).replace('-', '').split('.');
+        var display = $.map(toks[0].split('').reverse(), function (elm, i) {
+            return [(i % 3 == 0 && i > 0 ? ',' : ''), elm];
+        }).reverse().join('');
+            return [display , toks[1]].join('.')
+        };
+
+    }
+
+    function Account(data , user) {
+        var self = this;
+        data = data || {};
+        self.id = ko.observable();
+        self.name = ko.observable('');
+        self.balance = ko.observable();
+        self.org = ko.observable();
+        self.accURL = ko.computed(function() {
+        	return '#in/org/' + self.org()+'/' + self.id();
+        });
         self.removeUrl = ko.computed(function(){
             return "#in/removeAccount/"+self.id();
         });
+        self.user = ko.observable(user);
         
         self.hasNameError = ko.computed(function(){
             return self.name().length == 0;
         });
         
+        self.update = function(data) {
+            self.id(data['id']);
+            self.name(data['name'] || 'Untitled');
+            self.balance(data['balance'] || 0);
+            self.org(data['org']);
+        }
+        
         self.reset = function() {
 	        self.id("");
 	        self.name("");
 	        self.balance(0);
-        }
+        };
+        
+        self.addTransaction = function() {
+            $('#addTransaction').modal();
+        };
+        
+        self.update(data);
     }
     
-    function Organisation(data) {
+    function CurrentAccount(data , user) {
+        var self = this;
+        this.inheritFrom = Account;
+        this.inheritFrom(data,user);
+        
+        var superUpdate = self.update;
+        self.update = function(data) {
+            superUpdate(data);
+            self.transactions.clearCache();
+        }
+        self.transactions = new GigaScrollViewModel({
+            load: function(startIndex, length, callback) {
+            if (length <= 0) {
+                return;
+            }
+            jQuery.ajax({
+                url: '/api/getTransactions/' + self.org() + '/' + self.id() + '/' + startIndex + '/' + length,
+                success: function(data) {
+                    var items = [];
+                    for(var i = 0; i < length; i++) {
+                        if (data.obj.items[i] ) {items.push(new Transaction(data.obj.items[i],self,self.user()));}
+                    }
+                    callback(items, data.obj.size);
+                } 
+            });
+        }});
+    }
+    
+    function Organisation(data,user) {
         var self = this;
         data = data || {};
+        
         self.id = ko.observable(data['_id']);
         self.name = ko.observable(data['name']|| "");
         self.errorName = ko.observable("");
@@ -31,6 +136,9 @@ $(document).ready(function () {
         self.hasNameError = ko.computed(function(){
             return self.name().length == 0 || self.errorName().length > 0;
         });
+        self.user = ko.observable(user);
+        self.currentAcc = ko.observable(new CurrentAccount({},self.user()));
+        
         
         self.reset = function() {
             self.name("");
@@ -44,11 +152,11 @@ $(document).ready(function () {
             
             var newAccounts = [];
             for(var loop = 0; loop < accounts.length; ++loop) {
-                newAccounts.push(new Account(accounts[loop]));
+                newAccounts.push(new Account(accounts[loop],self.user()));
             }
             self.accounts(newAccounts);
         }
-        self.addOrg = function(user) {
+        self.addOrg = function() {
             var data = self.name();
           
             if (data) {
@@ -56,7 +164,7 @@ $(document).ready(function () {
                     url: "/api/addOrg",
                     data: {orgs : data},
                     success: function(data) {
-                        user.updateUser(data.obj);
+                        self.user().updateUser(data.obj);
                         jQuery('#addOrg').modal('hide')
                     },
                     error: function(jqXHR, textStatus, errorThrown){
@@ -107,6 +215,7 @@ $(document).ready(function () {
                 }
             }
         };
+        
     }
     
     function User(data) {
@@ -116,23 +225,25 @@ $(document).ready(function () {
         self.name = ko.observable(data['name']);
         self.email = ko.observable(data['email']);
         self.organisations = ko.observableArray();
-        
+        self.preferences = ko.observable(new Preferences());
         //behaviours
         self.updateUser = function(user){
             if (user) {
                 var orgs = user.organisations;
                 var ret = [];
                 for(var loop = 0; loop < orgs.length; ++loop) {
-                    ret.push(new Organisation(orgs[loop]));
+                    ret.push(new Organisation(orgs[loop],self));
                 }
                 
                 self.organisations(ret);
                 self.name(user.name);
                 self.email(user.email);
+                self.preferences().update(user.preferences);
             } else {
                 self.organisations([]);
                 self.name(null);
                 self.email("");
+                self.preferences(new Preferences());
             }
         };
         
@@ -159,16 +270,16 @@ $(document).ready(function () {
             }
         };
     }
+    
     function AppViewModel(data) {
         var self = this;
         data = data || {}
         self.email = ko.observable("");
         self.navStatus = ko.observable("home");
         self.user = ko.observable(new User());
-        self.newOrg = ko.observable(new Organisation());
-        self.currentOrg = ko.observable(new Organisation());
-        self.currentAcc = ko.observable(new Account());
-        self.newAccount = ko.observable(new Account());
+        self.newOrg = ko.observable(new Organisation({},self.user()));
+        self.currentOrg = ko.observable(new Organisation({},self.user()));
+        self.newAccount = ko.observable(new Account({},self.user()));
         
         //behaviour
         function nextTick(next) {
@@ -322,10 +433,24 @@ $(document).ready(function () {
                 url: '/api/getAcc/' + orgID + '/'+accID,
                 type: 'get',
                 success: function(data) {
-                    self.currentAcc().update(data.obj);
+                    self.currentOrg().currentAcc().update(data.obj);
                 }
             });
-        }
+        };
+        
+        self.saveAddTransaction = function(data) {
+            var orgID = self.currentOrg().id();
+            var accID = self.currentOrg().currentAcc().id(); 
+            jQuery.ajax({
+                url: '/api/addTransaction/' + orgID + '/'+accID,
+                type: 'post',
+                data: _.omit(data,'escapeHTML','h','toHash','toHTML','keys','has','join','log','toString'),
+                success: function(data) {
+                    self.currentOrg().currentAcc().update(data.obj);
+                    jQuery('#addTransaction').modal('hide');
+                }
+            });
+        };
         
         jQuery('body').ajaxSuccess(function(e, xhr, settings) {
             var data = jQuery.parseJSON(xhr.responseText);
@@ -435,7 +560,7 @@ $(document).ready(function () {
 	                self.performLogout();
 	            });
 	            this.post('#in/addOrg',function(){
-	                self.newOrg().addOrg(self.user());
+	                self.newOrg().addOrg();
 	                self.newOrg().reset();
 	            });
 	            this.get('#in/removeOrg/:id',function(){
@@ -449,6 +574,10 @@ $(document).ready(function () {
                 this.get('#in/removeAccount/:id',function(){
                     self.currentOrg().removeAccount(this.params['id']);
                     history.back();
+                });
+                this.post('#in/addTransaction',function(){
+                  self.saveAddTransaction(this.params);
+                  history.back();
                 });
 	            this.get('', function() { 
 	                self.go_to_org();

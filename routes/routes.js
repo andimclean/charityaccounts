@@ -336,23 +336,50 @@ function getTransactions(req,res) {
         return;
     }
     
-    var fromTxn = req.params.from;
-    if (!fromTxn) {
-        sendFailure(res, "Invalid Transaction");
-        return
-    }
+    var fromTxn = parseInt(req.params.from);
     
-    var countTxn = req.params.count;
+    var countTxn = parseInt(req.params.count);
     if (!countTxn) {
         sendFailure(res, "Invalid Transaction Count");
         return;
     }
             
+    var org;
+    var id;
+    var acc;
+    var txn;
     step(
-        function getTxn() {
+        function getOrg() {
             db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this.parallel());
+            db.users.findOne({_id: req.sessionObject.user},this.parallel());
         },
-        function 
+        function checkAccount(err, orgData, userData) {
+            if (err) throw err;
+            if (!orgData) throw new Error('Unable to find Organisation: ' + orgID);
+            if (!userData) throw new Error('Unable to find user: ' + req.sessionObject.user);
+            
+            org = orgData;
+            org.accounts = org.accounts || [];
+            acc = _.find(org.accounts, function(account) { return account.id === accID; });
+            
+            if (!acc) throw new Error('Unable to find account: ' + accID);
+            
+            db.transactions.find({orgid: orgID, accid:accID})
+                .sort({date: -1})
+                .skip(fromTxn)
+                .limit(countTxn)
+                .toArray(this.parallel());
+            db.transactions.find({orgid: orgID, accid:accID})
+                .count(this.parallel());
+        },
+        function sendData(err, transactions , size) {
+            if (err) {
+                sendFailure(res,err);
+            } else {
+                sendSuccess(res,{size: size , items:transactions});
+            }
+        }
+    );
 }
 
 function addAccount(req,res) {
@@ -387,7 +414,8 @@ function addAccount(req,res) {
             org.accounts.push({
                 id: id,
                 name: accountName,
-                balance: 0
+                balance: 0,
+                org: orgID
             });
             
             db.organisations.save(org,this);
@@ -412,6 +440,7 @@ function removeAccount(req,res) {
     var accountID = req.body.accountid;
     if (!accountID) {
         sendFailure(res,"Invalid AccountId");
+        return;
     }
     
     console.log("Remove Account Id : " + orgID + ":" + accountID);
@@ -444,19 +473,130 @@ function removeAccount(req,res) {
     );
 }
 
+function getAcc(req,res) {
+    var orgID = req.params.orgid;
+    if (!orgID) {
+    	console.log('OrgID is null');
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    var accountID = req.params.accid;
+    if (!accountID) {
+    	console.log('Account ID is null');
+        sendFailure(res,"Invalid AccountId");
+        return;
+    }
+    
+    console.log("Find Account Id : " + orgID + ":" + accountID);
+    var org;
+    step(
+        function getOrg() {
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this);
+        },
+        function foundOrg(err,data) {
+            if (err) {
+            	sendFailure(res,err);
+            	return;
+            }
+            if (!data) {
+            	sendFailure(res,new Error("Organisation not found: "+orgID));
+            	return;
+            }
+            
+            org = data;
+            org.accounts = org.accounts || [];
+            
+            var accounts = _.filter(org.accounts,function(item) {
+                return accountID == item.id;
+            });
+
+            if (accounts.length != 1) {
+            	sendFailure(res,new Error("Account not found"));
+            	return;
+            }
+        	sendSuccess(res,accounts[0]);
+        }
+    );
+}
+
+function addTransaction(req,res) {
+    var orgID = req.params.orgid;
+    var accID = req.params.accid;
+    
+    if (!orgID) {
+        sendFailure(res,"Invalid Organisation");
+        return;
+    }
+    if (!accID) {
+        sendFailure(res,"Invalid Account");
+        return;
+    }
+    
+    var org;
+    var id;
+    var acc;
+    var txn;
+    step(
+        function getOrg() {
+            crypto.randomBytes(32,this.parallel());
+            db.organisations.findOne({_id: mongo.ObjectId(orgID)}, this.parallel());
+            db.users.findOne({_id: req.sessionObject.user},this.parallel());
+        },
+        function foundOrg(err,bytes,orgData,userData) {
+            if (err) throw err;
+            if (!bytes) throw new Error("ID not generated");
+            if (!orgData)  throw new Error("Organisation not found: "+orgID);
+            if (!userData) throw new Error("User not found: " + req.sessionObject.user);
+            
+            id = bytes.toString("hex");
+            org = orgData;
+            org.accounts = org.accounts || [];
+            acc = _.find(org.accounts, function(account) { return account.id === accID; });
+            
+            if (!acc) { throw new Error("Account not found: " + accID); }
+            
+            var amount = parseFloat(req.body.amount) * 100;
+            if (req.body.transfered == 'out') {
+                amount *= -1;
+            }
+            
+            txn = {
+                id: id,
+                orgid: orgID,
+                accid: accID,
+                date: Date.parse(req.body.date),
+                description: req.body.description,
+                amount: amount
+            };
+            
+            db.transactions.save(txn,this);
+        },
+        function savedOrg(err,data) {
+            if (err) {
+                sendFailure(res,err);
+            } else {
+                sendSuccess(res,txn);
+            }
+        }
+    );
+}
+
+
 exports.bind = function bindRoutes(app) {
     db = mongo.connect(app.get("mongodb"),["logintokens", "users", "sessions","organisations","transactions"]);
 	app.get('/', index);
 	app.get('/api/getUser',parseSession,getUser);
     app.get('/api/getOrg/:orgid',parseSession,getOrg);
     app.get('/api/getAcc/:orgid/:accid',parseSession,getAcc);
+    app.get('/api/getTransactions/:orgid/:accid/:from/:count',parseSession,getTransactions);
 
-    app.post('/api/login',login);
-	app.post('/api/loginConfirm',loginConfirm);
-	app.post('/api/logout',parseSession,logout);
-	app.post('/api/addOrg',parseSession,addOrg);
-	app.post('/api/removeOrg',parseSession,removeOrg);
-	app.post('/api/addAccount',parseSession,addAccount);
-	app.post('/api/removeAccount', parseSession,removeAccount);
+    app.post('/api/login', login);
+	app.post('/api/loginConfirm', loginConfirm);
+	app.post('/api/logout',parseSession, logout);
+	app.post('/api/addOrg',parseSession, addOrg);
+	app.post('/api/removeOrg',parseSession, removeOrg);
+	app.post('/api/addAccount',parseSession, addAccount);
+	app.post('/api/removeAccount', parseSession, removeAccount);
+	app.post('/api/addTransaction/:orgid/:accid', parseSession, addTransaction);
 };
 

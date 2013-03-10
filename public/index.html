@@ -109,19 +109,44 @@
     </div>
     <div id="org" class="hide sections">
       <h1 data-bind="text:name"></h1>
-      <div id="accountList" class="well">
-      	<ul class="nav nav-list">
-      		<li class="nav-header clearfix">Accounts <button data-toggle="modal" data-target="#addAccount" class="btn btn-small pull-right">Add</button></li>
-      		<!-- ko foreach: accounts -->
-      		<li class="clearfix">
-      			<span data-bind="text: name"></span>
-      			<span data-bind="text: balance, css:{ negative : balance() < 0}"></span>
-      			<span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removeUrl}">delete</a></span>
-      		</li>
-      		
-      		<!-- /ko -->
-      	</ul>
-      </div>
+      <div id="org-row" class="row">
+        <div class="span3">
+          <div id="accountList" class="well">
+            <ul class="nav nav-list">
+              <li class="nav-header clearfix">Accounts <button data-toggle="modal" data-target="#addAccount" class="btn btn-small pull-right">Add</button></li>
+                <!-- ko foreach: accounts -->
+                  <li class="clearfix">
+                    <span><a data-bind="text: name, attr: { href: accURL}"></a></span>
+                    <span><a data-bind="text: balance, css:{ negative : balance() < 0},attr: { href: accURL}"></a></span>
+                    <span class="pull-right"><a class="btn btn-small btn-danger" data-bind="attr: {href:removeUrl}">delete</a></span>
+                  </li>
+                <!-- /ko -->
+            </ul>
+          </div> <!-- well -->
+        </div> <!-- span3 -->
+        <div id='accountTransactions' class='span9'>
+          <h1 data-bind="text: currentAcc().name"></h1>
+          <div class='actions'>
+            <ul>
+              <li class="pull-right"><a data-bind="click: currentAcc().addTransaction" class="btn btn-small">+</a></li>
+            </ul>
+          </div>
+          <div class='header'>
+            <span class='inblock date'>Date</span>
+            <span class='inblock description'>Description</span>
+            <span class='inblock amount_in'>In</span>
+            <span class='inblock amount_out'>Out</span>
+          </div>
+          <ul data-bind='gigaScroll: currentAcc().transactions'>
+            <li>
+              <span class='inblock date' data-bind='dateString: date'></span>
+              <span class='inblock description' data-bind='text: description'></span>
+              <span class='inblock amount_in' data-bind='text: amount_in'></span>
+              <span class='inblock amount_out' data-bind='text: amount_out'></span>
+            </li>
+          </ul>
+        </div> <!--  span9 -->
+      </div> <!-- row -->
     </div>
     <div id="addAccount" class="modal hide fade" role="dialog">
     	<form class="modal-form" method="post" action="#in/addAccount">
@@ -139,6 +164,58 @@
             </div>
     	</form>
     </div>
+    
+    <div id="addTransaction" class="modal hide fade" role="dialog">
+      <form class='modal-form form-horizontal' method="post" action="#in/addTransaction">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+
+          <h3>Add new Transaction</h3>
+        </div>
+
+        <div class="modal-body">
+          <div class="control-group">
+            <label class="control-label">Date:</label>
+            <div class="controls">
+              <input type="date" class="autofocus" value="" name="date" id="date" placeholder="Date" data-bind="value: date,valueUpdate:'afterkeydown'" />
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Description:</label>
+            <div class="controls">
+              <input type="text" class="" value="" name="description" id="description" placeholder="Description" data-bind="value: description,valueUpdate:'afterkeydown'" />
+            </div>
+          </div>
+
+          <div class="control-group">
+            <label class="control-label">Amount:</label>
+            <div class="controls">
+              <div class="input-prepend">
+                <input type="number"  min="0.01"  step="0.01" class="" value="" name="amount" id="amount" placeholder="Amount" data-bind="value: amount,valueUpdate:'afterkeydown'" />
+              </div>
+            </div>
+          </div>
+          
+          <div class="control-group">
+            <label class="control-label">Transfered:</label>
+            <div class="controls">
+              <div class="input-prepend">
+                <select id='transfered' name='transfered' data-bind='value: transfertype'>
+                  <option value='in'>Money In</option>
+                  <option value='out'>Money Out</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <input data-bind="" type="submit" class="btn btn-primary" value="Save" /> <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+        </div>
+      </form>
+    </div>
+
     <div id="addOrg" class="modal hide fade" role="dialog">
       <form class='modal-form' method="post" action="#in/addOrg">
         <div class="modal-header">
@@ -176,9 +253,14 @@
   <!-- Placed at the end of the document so the pages load faster -->
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
   <script src="lib/bootstrap/js/bootstrap.min.js" type="text/javascript"></script>
-  <script src="lib/knockout/knockout.js" type="text/javascript"></script>
+  <script src="lib/knockout/knockout.full.js" type="text/javascript"></script>
   <script src="lib/knockout/plugins.js" type="text/javascript"></script>
   <script src="lib/sammy/sammy.js" type="text/javascript"></script>
   <script src="js/index.js" type="text/javascript"></script>
+  <script src='lib/giga-scroll/string-template-engine.js' type="text/javascript"></script> 
+  <script src='lib/giga-scroll/binding.js' type="text/javascript"></script> 
+  <script src='lib/giga-scroll/view-model.js' type="text/javascript"></script> 
+  <script src='lib/underscore/underscore-min.js' type="text/javascript"></script>
+  <script src='lib/moment/moment-min.js' type="text/javascript"></script>
 </body>
 </html>
