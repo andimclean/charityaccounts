@@ -25,6 +25,14 @@ $(document).ready(function () {
         self.amount = ko.observable(data['amount'] / 100);
         self.description = ko.observable(data['description']);
         self.user = ko.observable(user);
+        self.tot = ko.observable(data['total'] / 100);
+        self.total = ko.moneyObservable(
+            ko.computed({
+                read: function(){
+                    return self.tot();
+                },
+                deferEvaluation:true
+            }),user.preferences().currency);
         
         self.amount_in = ko.moneyObservable( 
 	        ko.computed({
@@ -135,6 +143,7 @@ $(document).ready(function () {
         data = data || {};
         self.amount_in = '';
         self.amount_out = '';
+        self.total = '';
         self.id = ko.observable(data['_id']);
         self.name = ko.observable(data['name']|| "");
         self.errorName = ko.observable("");
@@ -221,6 +230,14 @@ $(document).ready(function () {
             }
         };
         
+        self.updateAccount = function(accountObj) {
+            var item = self.accounts.arrayFirst(function(item) {
+                return item.id() === accountObj.id;
+            });
+            if (item) {
+                item.update(accountObj);
+            }
+        };
     }
     
     function User(data) {
@@ -451,6 +468,7 @@ $(document).ready(function () {
                 data: _.omit(data,'escapeHTML','h','toHash','toHTML','keys','has','join','log','toString'),
                 success: function(data) {
                     self.currentOrg().currentAcc().update(data.obj);
+                    self.currentOrg().updateAccount(data.obj);
                     jQuery('#addTransaction').modal('hide');
                 }
             });
@@ -581,7 +599,6 @@ $(document).ready(function () {
                 });
                 this.post('#in/addTransaction',function(){
                   self.saveAddTransaction(this.params);
-                  history.back();
                 });
 	            this.get('', function() { 
 	                self.go_to_org();

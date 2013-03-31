@@ -275,7 +275,7 @@ var getTransactions = {
 	    step(
 	        function checkAccount() {
 	            db.transactions.find({orgid: req.org._id, accid:req.acc.id})
-	                .sort({date: -1})
+	                .sort({date: -1, id: -1})
 	                .skip(fromTxn)
 	                .limit(countTxn)
 	                .toArray(this.parallel());
@@ -377,31 +377,61 @@ var addTransaction = {
 	            if (!newid) throw new Error("ID not generated");
 	           
 	            id = newid;
+	            return true;
+	        },
+	        function buildTransactionRecord(err) {
+	            if (err) throw err;
+
+                var amount = parseFloat(req.body.amount) * 100;
+                if (req.body.transfered == 'out') {
+                    amount *= -1;
+                }
+               
+                txn = {
+                    id: '',
+                    orgid: req.org._id,
+                    accid: req.acc.id,
+                    date: Date.parse(req.body.date),
+                    description: req.body.description,
+                    amount: amount,
+                    dayid: id,
+                    daycounter: 0
+                };
+                
+                return true;
+	        },
+	        function getPreviousTransaction(err) {
+                if (err) throw err;
 	           
-	            var amount = parseFloat(req.body.amount) * 100;
-	            if (req.body.transfered == 'out') {
-	                amount *= -1;
-	            }
-	           
-	            txn = {
-	                id: id,
-	                orgid: req.org._id,
-	                accid: req.acc.id,
-	                date: Date.parse(req.body.date),
-	                description: req.body.description,
-	                amount: amount
-	            };
-	            
+				db.transactions.find({orgid: txn.orgid, accid: txn.accid, date: {$lte: txn.date}}).sort({date:-1, id:-1}).limit(1).toArray(this);
+	        },
+	        function gotPreviousTransaction(err, prev_transactions) {
+	            if (err) throw err;
+
+                if (prev_transactions && prev_transactions.length === 1) {
+    	            txn.total = prev_transactions[0].total + txn.amount;
+    	            if (prev_transactions[0].date === txn.date) {
+    	               txn.dayid = prev_transactions[0].dayid;
+    	               txn.daycounter = prev_transactions[0].daycounter + 1;
+    	            }
+    	        } else {
+                    txn.total = txn.amount;
+    	        }
+    	        
+    	        txn.id = txn.dayid + '_' + ('00000000' + txn.daycounter).slice(-8);
+
 	            db.transactions.save(txn,this.parallel());
 	            
-	            req.acc.balance += amount;
+	            db.transactions.update({orgid: txn.orgid, accid: txn.accid, date: {$gt: txn.date}}, {$inc: {total: txn.amount}}, {multi:true}, this.parallel);
+	            
+	            req.acc.balance += txn.amount;
 	            db.organisations.save(req.org, this.parallel());
 	        },
-	        function savedTxn(err,txndata, orgdata) {
+	        function savedTxn(err,txndata, updateres, orgdata) {
 	            if (err) {
 	                rh.sendFailure(res,err);
 	            } else {
-	                rh.sendSuccess(res,txn);
+	                rh.sendSuccess(res,req.acc);
 	            }
 	        }
 	    );

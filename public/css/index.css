@@ -64,17 +64,21 @@
 } 
 
 .date {
-	width: 19%;
+	width: 15%;
 }
 .description {
-  width: 40%;
+  width: 38%;
 }
 .amount_in {
-  width: 19%;
+  width: 15%;
 }
 .amount_out {
-  width: 19%;
+  width: 15%;
 }
+.total {
+  width: 15%;
+}
+
 #gigaViewport li {
 	 background: #fcfff4; /* Old browsers */
 	/* IE9 SVG, needs conditional override of 'filter' to 'none' */
