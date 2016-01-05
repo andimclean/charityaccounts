@@ -12,7 +12,7 @@ var app = express();
 
 app.configure(function(){
   app.set('ip', process.env.IP || "0.0.0.0");
-  app.set('port', process.env.PORT || 3000);
+  app.set('port', process.env.PORT || 4000);
   app.set('views', __dirname + '/views');
   app.use(express.favicon());
   app.use(express.logger('dev'));
